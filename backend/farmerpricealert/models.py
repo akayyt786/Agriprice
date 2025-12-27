@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.db import models
 
 
 # ==========================
@@ -111,3 +112,21 @@ class AlertHistory(models.Model):
 
     def __str__(self):
         return f"Alert for {self.subscription.user.username}"
+
+class SiteContent(models.Model):
+    page_name = models.CharField(max_length=100, unique=True)
+
+    title = models.CharField(max_length=200, blank=True)
+    subtitle = models.CharField(max_length=300, blank=True)
+    banner_image = models.ImageField(upload_to="banners/", blank=True, null=True)
+
+    def __str__(self):
+        return self.page_name
+
+class DashboardImage(models.Model):
+    key = models.CharField(max_length=100, unique=True)   # example: live_prices_banner
+    image = models.ImageField(upload_to="dashboard/")
+
+    def __str__(self):
+        return self.key
+

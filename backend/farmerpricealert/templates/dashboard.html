@@ -1,3 +1,4 @@
+{% load static %}
 <html>
 
 <head>
@@ -47,7 +48,9 @@
                                             </path>
                                         </svg>
                                     </div>
-                                    <p class="text-[#101911] text-sm font-medium leading-normal">Market Prices</p>
+                                    <a href="marketprices.html">
+                                        <p class="text-[#101911] text-sm font-medium leading-normal">Market Prices</p>
+                                    </a>
                                 </div>
                                 <div class="flex items-center gap-3 px-3 py-2">
                                     <div class="text-[#101911]" data-icon="Bell" data-size="24px" data-weight="regular">
@@ -58,7 +61,9 @@
                                             </path>
                                         </svg>
                                     </div>
-                                    <p class="text-[#101911] text-sm font-medium leading-normal">My Alerts</p>
+                                    <a href="myalerts.html">
+                                        <p class="text-[#101911] text-sm font-medium leading-normal">My Alerts</p>
+                                    </a>
                                 </div>
                                 <div class="flex items-center gap-3 px-3 py-2">
                                     <div class="text-[#101911]" data-icon="User" data-size="24px" data-weight="regular">
@@ -69,7 +74,9 @@
                                             </path>
                                         </svg>
                                     </div>
-                                    <p class="text-[#101911] text-sm font-medium leading-normal">Profile</p>
+                                    <a href="profile_page.html">
+                                        <p class="text-[#101911] text-sm font-medium leading-normal">Profile</p>
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -165,34 +172,34 @@
                         <div class="flex items-stretch p-4 gap-3">
                             <div class="flex h-full flex-1 flex-col gap-4 rounded-lg min-w-40">
                                 <div class="w-full bg-center bg-no-repeat aspect-square bg-cover rounded-xl flex flex-col"
-                                    style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDEP6gmvCbF7eNpxjlJRDZ2u42X7ZC0InPxhXXIyMpZ9mwSYFaw2oOZjbolM5Rz4M8al803h8mXC5uwY4UaI1AfsKLbiuaGYIqiZkaV4zHqLTF-wgQ55R7ATSVHwRNaLG8wlLImXT2_qj1E9FGhJxfw5XPcHumTAZPx29OmWweFP5ePH3REeQo-UKdsKkzwZy3g4-ows8kjW-bf8Hs3utnNaucWW9gOQASlg3y4P4QGDgz8wbfQCowQMhOaqEwHakGfZDiuPE24usk");'>
+                                    style='background-image: url("{{ dashboard_images.wheat.image.url }}");'>
                                 </div>
                                 <p class="text-[#101911] text-base font-medium leading-normal">Wheat - ₹2,150/quintal
                                 </p>
                             </div>
                             <div class="flex h-full flex-1 flex-col gap-4 rounded-lg min-w-40">
                                 <div class="w-full bg-center bg-no-repeat aspect-square bg-cover rounded-xl flex flex-col"
-                                    style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDbQQ23gSOjL7Fl6a5raZKtknZzQtg0_hup9aQelO7rs1mhkbvMAWUS9Wb1mqiYyaUBcSBguyBLG_9g0Vbl4ygG4DgE9vC05ps3UsbP7rriDeq_F2X9UU-U3vOo962cBl77QuBcFT9JzlSYgCbjIjyj-8PKMHmf-gSBhWK1psl8HS4p4qtk7ofBwq9xkFgCbiPworewFZNqB1j_78hypaoFDbqyDwItYN6DMXkQCDTydSkf1rR0ZK9kNxpZc1WSt6r2kJEHJ10N9YI");'>
+                                    style='background-image: url("{{ dashboard_images.rice.image.url }}");'>
                                 </div>
                                 <p class="text-[#101911] text-base font-medium leading-normal">Rice - ₹1,800/quintal</p>
                             </div>
                             <div class="flex h-full flex-1 flex-col gap-4 rounded-lg min-w-40">
                                 <div class="w-full bg-center bg-no-repeat aspect-square bg-cover rounded-xl flex flex-col"
-                                    style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAYxf821sLQn7OUwXPD3e923RY1LqPybalrbUUKErwzAM20MygJPZP5myAAkL5FQCbt3fU6I4sCswOq9o3cw0RfSn7KCMgIuw7xK2W-p02bqSa7NWA2nQzoTfjLBLep3O6fsKmf6XG3k2B_0krLdQgMznUYmHIqFcagdQowhJgTJhZFtCZgcm13m8gSkiSsbOq-0m8CoCNPPq9b218aTi2821YJ4Q5nWslR317tTE46Al_x8J-h1hDJOabfC6OV22I_f6_CjgsWoCw");'>
+                                    style='background-image: url("{{ dashboard_images.cotton.image.url }}");'>
                                 </div>
                                 <p class="text-[#101911] text-base font-medium leading-normal">Cotton - ₹6,500/quintal
                                 </p>
                             </div>
                             <div class="flex h-full flex-1 flex-col gap-4 rounded-lg min-w-40">
                                 <div class="w-full bg-center bg-no-repeat aspect-square bg-cover rounded-xl flex flex-col"
-                                    style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAlbe_Eq_gCheADdGI_sE7heRc-dW0ASSGSMyKPLPkUXEHf_rwUnrqmUIlzDrr7UQsXtnk_5aH9NDh1CONkM-6dkHv5BVvk12L6BAusdJB_HnFzX2WEOgI_Bgj5tTUCcJoSW1253d-dLg_5EySlnHFQUk04q7Z7Y_C7L67GitHuUSxX8Sy-I7K3EqXYcKfusdGuW1ck8DSsbgeOb5VqhUKFvcRGkH2DcW1RTI8j26MmjpcfAPGtnncWghw8zIis7hFWNwzudga7UdM");'>
+                                    style='background-image: url("{{ dashboard_images.soybean.image.url }}");'>
                                 </div>
                                 <p class="text-[#101911] text-base font-medium leading-normal">Soybean - ₹4,500/quintal
                                 </p>
                             </div>
                             <div class="flex h-full flex-1 flex-col gap-4 rounded-lg min-w-40">
                                 <div class="w-full bg-center bg-no-repeat aspect-square bg-cover rounded-xl flex flex-col"
-                                    style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuA6POQP8mFBKsC9GjUKQ29MBYGEIxdw_IBoAhylEDmKZ6WO-e2e1Uf65FJxlqs2U3O4KFz4e2KKONiE4OLh7H8n23epdudH0DTP5GNm7YkR0ZFFvJRhh8uPxwmMC6BMb7DugptxdLMXqREMvpP0VD-0tg657K3EYLdx2fvENii0biWZpfIzlOAjQHRqkwFUyeGE_RHsULoqtftqhBt3nH6b2z9oDYpbp1yo4MzfbXWcjG8WKlEmDVKQvVLWiexYikYnjlE97PMNovc");'>
+                                    style='background-image: url("{{ dashboard_images.sugarcane.image.url }}");'>
                                 </div>
                                 <p class="text-[#101911] text-base font-medium leading-normal">Sugarcane - ₹350/quintal
                                 </p>
