@@ -12,12 +12,19 @@ from django.utils.decorators import method_decorator
 from django.shortcuts import render
 from .models import SiteContent
 from .models import DashboardImage
+import random
+import requests
 
+from rest_framework.decorators import api_view
+BASE_URL = "https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070"
+API_KEY = "579b464db66ec23bdd00000162112b7dd11f40117613f282ddc07b6e"
 
 def registration_page(request):
     content = SiteContent.objects.filter(page_name="registration").first()
     return render(request, "registration.html", {"content": content})
 
+def market_prices_page(request):
+    return render(request, "marketprices.html")
 
 def dashboard_page(request):
     images = {img.key: img for img in DashboardImage.objects.all()}
@@ -26,8 +33,51 @@ def dashboard_page(request):
 def login_page(request):
     return render(request, "login.html")
 
+# Get government market prices
+@api_view(["GET"])
+def gov_market_prices(request):
+    crop = request.GET.get("crop")
+    state = request.GET.get("state")
+    district = request.GET.get("district")
 
+    params = {
+        "api-key": API_KEY,
+        "format": "json",
+        "limit": 1000      # get as much as possible
+    }
 
+    res = requests.get(BASE_URL, params=params)
+
+    if res.status_code != 200:
+        return Response({"error": "Gov API not responding"}, status=500)
+
+    data = res.json().get("records", [])
+
+    # FILTERS
+    if crop:
+        data = [d for d in data if crop.lower() in d.get("commodity", "").lower()]
+
+    if state:
+        data = [d for d in data if state.lower() in d.get("state", "").lower()]
+
+    if district:
+        data = [d for d in data if district.lower() in d.get("district", "").lower()]
+
+    formatted = []
+
+    for d in data:
+        formatted.append({
+            "crop": d.get("commodity"),
+            "market": d.get("market"),
+            "state": d.get("state"),
+            "district": d.get("district"),
+            "min_price": d.get("min_price"),
+            "max_price": d.get("max_price"),
+            "modal_price": d.get("modal_price"),
+            "date": d.get("arrival_date"),
+        })
+
+    return Response({"prices": formatted})
 
 
 @method_decorator(csrf_exempt, name='dispatch')

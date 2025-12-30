@@ -5,272 +5,232 @@
     <meta charset="utf-8" />
     <link crossorigin="" href="https://fonts.gstatic.com/" rel="preconnect" />
     <link as="style"
-        href="https://fonts.googleapis.com/css2?display=swap&amp;family=Inter%3Awght%40400%3B500%3B700%3B900&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900"
+        href="https://fonts.googleapis.com/css2?display=swap&family=Inter%3Awght%40400%3B500%3B700%3B900&family=Noto+Sans%3Awght%40400%3B500%3B700%3B900"
         onload="this.rel='stylesheet'" rel="stylesheet" />
+
     <link
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
         rel="stylesheet" />
+
     <title>Market Prices - AgriAssist</title>
     <link href="data:image/x-icon;base64," rel="icon" type="image/x-icon" />
+
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 </head>
 
 <body>
-    <div class="relative flex h-auto min-h-screen w-full flex-col bg-white group/design-root overflow-x-hidden"
-        style='font-family: Inter, "Noto Sans", sans-serif;'>
-        <div class="layout-container flex h-full grow flex-col">
-            <header
-                class="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#f1f4f1] px-10 py-3">
-                <div class="flex items-center gap-4 text-[#121713]">
-                    <div class="size-4">
-                        <svg fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<div class="relative flex h-auto min-h-screen w-full flex-col bg-white group/design-root overflow-x-hidden"
+     style='font-family: Inter, "Noto Sans", sans-serif;'>
+
+    <div class="layout-container flex h-full grow flex-col">
+        <header
+            class="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#f1f4f1] px-10 py-3">
+            <div class="flex items-center gap-4 text-[#121713]">
+                <div class="size-4">
+                    <svg fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                        <path
+                            d="M4 42.4379C4 42.4379 14.0962 36.0744 24 41.1692C35.0664 46.8624 44 42.2078 44 42.2078L44 7.01134C44 7.01134 35.068 11.6577 24.0031 5.96913C14.0971 0.876274 4 7.27094 4 7.27094L4 42.4379Z"
+                            fill="currentColor"></path>
+                    </svg>
+                </div>
+                <h2 class="text-[#121713] text-lg font-bold leading-tight tracking-[-0.015em]">AgriAssist</h2>
+            </div>
+
+            <div class="flex flex-1 justify-end gap-8">
+                <div class="flex items-center gap-9">
+                    <a class="text-[#121713] text-sm font-medium leading-normal" href="#">Dashboard</a>
+                    <a class="text-[#121713] text-sm font-bold leading-normal border-b-2 border-[#1c5e21]" href="#">
+                        Market Prices
+                    </a>
+                </div>
+
+                <button
+                    class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 bg-[#f1f4f1] text-[#121713] gap-2 text-sm font-bold leading-normal tracking-[0.015em] min-w-0 px-2.5">
+                    <div class="text-[#121713]">
+                        <svg fill="currentColor" height="20px" width="20px" viewBox="0 0 256 256">
                             <path
-                                d="M4 42.4379C4 42.4379 14.0962 36.0744 24 41.1692C35.0664 46.8624 44 42.2078 44 42.2078L44 7.01134C44 7.01134 35.068 11.6577 24.0031 5.96913C14.0971 0.876274 4 7.27094 4 7.27094L4 42.4379Z"
-                                fill="currentColor"></path>
+                                d="M221.8,175.94C216.25,166.38,208,139.33,208,104a80,80,0,1,0-160,0c0,35.34-8.26,62.38-13.81,71.94A16,16,0,0,0,48,200H88.81a40,40,0,0,0,78.38,0H208a16,16,0,0,0,13.8-24.06ZM128,216a24,24,0,0,1-22.62-16h45.24A24,24,0,0,1,128,216ZM48,184c7.7-13.24,16-43.92,16-80a64,64,0,1,1,128,0c0,36.05,8.28,66.73,16,80Z">
+                            </path>
                         </svg>
                     </div>
-                    <h2 class="text-[#121713] text-lg font-bold leading-tight tracking-[-0.015em]">AgriAssist</h2>
+                </button>
+
+                <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10"
+                    style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCMI0aj8z-fKpwRFRqm3H2fgWoUmyVdRo4v7l2cZvtNijAixlFnixesfG48ILRaM0Gl7NgWIBh1vq8nb0rRAh5o9YYTctLqoq0rXQOMTuEzntySGR1CLWn_SR5RJ63iWIpt2bzFZ71uLiXV8zyzwcBkfvX15-lE7wz8G6Gj91RSRV8hicyV1xYJyyHJPgAurF3dHY09opRTyECXuFg2FsYDBeJ9NHaxB5eZOvGbIQvoZxGY-LdMMj-IQKi6zNtlkQ9NIlVEAAglV4s");'>
                 </div>
-                <div class="flex flex-1 justify-end gap-8">
-                    <div class="flex items-center gap-9">
-                        <a class="text-[#121713] text-sm font-medium leading-normal" href="#">Dashboard</a>
-                        <a class="text-[#121713] text-sm font-bold leading-normal border-b-2 border-[#1c5e21]"
-                            href="#">Market Prices</a>
-                    </div>
-                    <button
-                        class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 bg-[#f1f4f1] text-[#121713] gap-2 text-sm font-bold leading-normal tracking-[0.015em] min-w-0 px-2.5">
-                        <div class="text-[#121713]" data-icon="Bell" data-size="20px" data-weight="regular">
-                            <svg fill="currentColor" height="20px" viewBox="0 0 256 256" width="20px"
-                                xmlns="http://www.w3.org/2000/svg">
-                                <path
-                                    d="M221.8,175.94C216.25,166.38,208,139.33,208,104a80,80,0,1,0-160,0c0,35.34-8.26,62.38-13.81,71.94A16,16,0,0,0,48,200H88.81a40,40,0,0,0,78.38,0H208a16,16,0,0,0,13.8-24.06ZM128,216a24,24,0,0,1-22.62-16h45.24A24,24,0,0,1,128,216ZM48,184c7.7-13.24,16-43.92,16-80a64,64,0,1,1,128,0c0,36.05,8.28,66.73,16,80Z">
-                                </path>
-                            </svg>
-                        </div>
-                    </button>
-                    <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10"
-                        style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCMI0aj8z-fKpwRFRqm3H2fgWoUmyVdRo4v7l2cZvtNijAixlFnixesfG48ILRaM0Gl7NgWIBh1vq8nb0rRAh5o9YYTctLqoq0rXQOMTuEzntySGR1CLWn_SR5RJ63iWIpt2bzFZ71uLiXV8zyzwcBkfvX15-lE7wz8G6Gj91RSRV8hicyV1xYJyyHJPgAurF3dHY09opRTyECXuFg2FsYDBeJ9NHaxB5eZOvGbIQvoZxGY-LdMMj-IQKi6zNtlkQ9NIlVEAAglV4s");'>
+            </div>
+        </header>
+
+        <div class="px-40 flex flex-1 justify-center py-5">
+            <div class="layout-content-container flex flex-col max-w-[1100px] flex-1">
+
+                <div class="flex flex-wrap justify-between gap-3 p-4">
+                    <div class="flex min-w-72 flex-col gap-3">
+                        <p class="text-[#121713] text-[32px] font-bold">Market Prices</p>
+                        <p class="text-[#68826b] text-sm">
+                            Real-time prices from mandis across the country. Updated hourly.
+                        </p>
                     </div>
                 </div>
-            </header>
-            <div class="px-40 flex flex-1 justify-center py-5">
-                <div class="layout-content-container flex flex-col max-w-[1100px] flex-1">
-                    <div class="flex flex-wrap justify-between gap-3 p-4">
-                        <div class="flex min-w-72 flex-col gap-3">
-                            <p class="text-[#121713] tracking-light text-[32px] font-bold leading-tight">Market Prices
-                            </p>
-                            <p class="text-[#68826b] text-sm font-normal leading-normal">Real-time prices from mandis
-                                across the country. Updated hourly.</p>
-                        </div>
-                    </div>
-                    <div class="flex flex-col gap-4 p-4">
-                        <div class="flex flex-wrap items-center gap-4 rounded-xl bg-[#f1f4f1] p-4">
-                            <div class="flex flex-1 min-w-[200px] flex-col gap-1">
-                                <label class="text-xs font-bold text-[#121713]">Search Crop</label>
-                                <div class="relative">
-                                    <input
-                                        class="w-full rounded-lg border-none bg-white p-2 text-sm text-[#121713] shadow-sm focus:ring-2 focus:ring-[#1c5e21]"
-                                        placeholder="e.g. Wheat, Rice" type="text" />
-                                    <span
-                                        class="material-symbols-outlined absolute right-2 top-2 text-[#68826b] text-lg">search</span>
-                                </div>
-                            </div>
-                            <div class="flex flex-1 min-w-[200px] flex-col gap-1">
-                                <label class="text-xs font-bold text-[#121713]">Select State</label>
-                                <select
-                                    class="w-full rounded-lg border-none bg-white p-2 text-sm text-[#121713] shadow-sm focus:ring-2 focus:ring-[#1c5e21]">
-                                    <option>All States</option>
-                                    <option>Punjab</option>
-                                    <option>Haryana</option>
-                                    <option>Uttar Pradesh</option>
-                                    <option>Madhya Pradesh</option>
-                                </select>
-                            </div>
-                            <div class="flex flex-1 min-w-[200px] flex-col gap-1">
-                                <label class="text-xs font-bold text-[#121713]">Select District</label>
-                                <select
-                                    class="w-full rounded-lg border-none bg-white p-2 text-sm text-[#121713] shadow-sm focus:ring-2 focus:ring-[#1c5e21]">
-                                    <option>All Districts</option>
-                                    <option>Amritsar</option>
-                                    <option>Karnal</option>
-                                    <option>Meerut</option>
-                                    <option>Indore</option>
-                                </select>
-                            </div>
-                            <div class="flex flex-col gap-1 justify-end">
-                                <label class="text-xs font-bold text-transparent select-none">Action</label>
-                                <button
-                                    class="flex items-center justify-center gap-2 rounded-lg bg-[#1c5e21] px-5 py-2 text-sm font-bold text-white shadow-sm hover:bg-[#144718]">
-                                    <span class="material-symbols-outlined text-lg">filter_alt</span>
-                                    Apply
-                                </button>
+
+                <div class="flex flex-col gap-4 p-4">
+
+                    <div class="flex flex-wrap items-center gap-4 rounded-xl bg-[#f1f4f1] p-4">
+                        <div class="flex flex-1 min-w-[200px] flex-col gap-1">
+                            <label class="text-xs font-bold text-[#121713]">Search Crop</label>
+                            <div class="relative">
+                                <input
+    id="filter-crop"
+    class="w-full rounded-lg bg-white p-2 text-sm text-[#121713] shadow-sm focus:ring-2 focus:ring-[#1c5e21]"
+    placeholder="e.g. Wheat, Rice" type="text" />
+
+                                <span class="material-symbols-outlined absolute right-2 top-2 text-[#68826b] text-lg">
+                                    search
+                                </span>
                             </div>
                         </div>
-                        <div
-                            class="hidden md:grid grid-cols-12 gap-4 px-4 py-3 border-b border-[#e0e5e0] text-sm font-bold text-[#68826b]">
-                            <div class="col-span-3">Crop Name</div>
-                            <div class="col-span-3">Mandi Location</div>
-                            <div class="col-span-2 text-right">Min Price (₹/Q)</div>
-                            <div class="col-span-2 text-right">Max Price (₹/Q)</div>
-                            <div class="col-span-2 text-right">Last Updated</div>
+
+                        <div class="flex flex-1 min-w-[200px] flex-col gap-1">
+                            <label class="text-xs font-bold text-[#121713]">State</label>
+<input
+    id="filter-state"
+    placeholder="Type state name"
+    class="w-full rounded-lg bg-white p-2 text-sm text-[#121713] shadow-sm focus:ring-2 focus:ring-[#1c5e21]" />
+
                         </div>
-                        <div class="flex flex-col gap-2">
-                            <div
-                                class="group flex flex-col md:grid md:grid-cols-12 gap-2 md:gap-4 items-center rounded-xl bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_6px_rgba(0,0,0,0.08)] transition-all border border-transparent hover:border-[#dce5dc]">
-                                <div class="col-span-3 flex items-center gap-3 w-full md:w-auto">
-                                    <div class="h-10 w-10 shrink-0 rounded-full bg-cover bg-center"
-                                        style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCw3dXjwtKpJGiC_u1qmzoofMsnsbOPkHMw8IHECmmEh7oNK9ImAmvrVYvsd8vFGWwfBuBdp-f_6xocUTWNIRGZSql8H_wGMXEhIfF-UK3cEyCkbKXaef5opLy4URU-iaPu9VaUwHQCvKUJXqVavbv0CILNLM-IjM8sO2-Ok9ZuN4EOCOHpO_h5NXlQ5-5ojVKgfIB5hT6y4OJK4ef61TX7TMN2qig_fCvQoRsmqQ1FX2RtCvo0fQUneDS3U4jbDJrEjt-biZnd0FA");'>
-                                    </div>
-                                    <div>
-                                        <p class="font-bold text-[#121713]">Wheat (Lokwan)</p>
-                                        <p class="text-xs text-[#68826b] md:hidden">Azadpur, Delhi</p>
-                                    </div>
-                                </div>
-                                <div class="col-span-3 w-full md:w-auto text-sm text-[#121713] hidden md:block">
-                                    <p class="font-medium">Azadpur Mandi</p>
-                                    <p class="text-xs text-[#68826b]">Delhi</p>
-                                </div>
-                                <div class="col-span-2 w-full md:w-auto flex justify-between md:block text-right">
-                                    <span class="text-xs font-bold text-[#68826b] md:hidden">Min Price</span>
-                                    <span class="font-medium text-[#121713]">₹2,350</span>
-                                </div>
-                                <div class="col-span-2 w-full md:w-auto flex justify-between md:block text-right">
-                                    <span class="text-xs font-bold text-[#68826b] md:hidden">Max Price</span>
-                                    <span class="font-bold text-[#1c5e21]">₹2,450</span>
-                                </div>
-                                <div class="col-span-2 w-full md:w-auto flex justify-between md:block text-right">
-                                    <span class="text-xs font-bold text-[#68826b] md:hidden">Updated</span>
-                                    <span class="text-xs text-[#68826b]">10 mins ago</span>
-                                </div>
-                            </div>
-                            <div
-                                class="group flex flex-col md:grid md:grid-cols-12 gap-2 md:gap-4 items-center rounded-xl bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_6px_rgba(0,0,0,0.08)] transition-all border border-transparent hover:border-[#dce5dc]">
-                                <div class="col-span-3 flex items-center gap-3 w-full md:w-auto">
-                                    <div class="h-10 w-10 shrink-0 rounded-full bg-cover bg-center"
-                                        style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDqnxPnTHR-YNDx24Tk4qrKh1_H54hfD53Z8B4LQG1NNuv8tR5QbqAdWni53xBEZFdyLbixyw9vkmu8wLuQevi4CWbArAGfd1bxSvyhgRjN3A00bIigmqyUSTpcc5b11xmViQnps0a_VOb2MyiRJTmJsyp_CoWsc5FIIMN6awlE3B30DFHQNRVKZ4attlg6_Bu5p176XJdZu15B26Rt7ewaaO_sXyEEla2VE7haV68Iobjfb75W6y9TINEt_iyzEkHZdtGI17qItZo");'>
-                                    </div>
-                                    <div>
-                                        <p class="font-bold text-[#121713]">Basmati Rice 1121</p>
-                                        <p class="text-xs text-[#68826b] md:hidden">Karnal, Haryana</p>
-                                    </div>
-                                </div>
-                                <div class="col-span-3 w-full md:w-auto text-sm text-[#121713] hidden md:block">
-                                    <p class="font-medium">Karnal Mandi</p>
-                                    <p class="text-xs text-[#68826b]">Haryana</p>
-                                </div>
-                                <div class="col-span-2 w-full md:w-auto flex justify-between md:block text-right">
-                                    <span class="text-xs font-bold text-[#68826b] md:hidden">Min Price</span>
-                                    <span class="font-medium text-[#121713]">₹3,800</span>
-                                </div>
-                                <div class="col-span-2 w-full md:w-auto flex justify-between md:block text-right">
-                                    <span class="text-xs font-bold text-[#68826b] md:hidden">Max Price</span>
-                                    <span class="font-bold text-[#1c5e21]">₹4,200</span>
-                                </div>
-                                <div class="col-span-2 w-full md:w-auto flex justify-between md:block text-right">
-                                    <span class="text-xs font-bold text-[#68826b] md:hidden">Updated</span>
-                                    <span class="text-xs text-[#68826b]">25 mins ago</span>
-                                </div>
-                            </div>
-                            <div
-                                class="group flex flex-col md:grid md:grid-cols-12 gap-2 md:gap-4 items-center rounded-xl bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_6px_rgba(0,0,0,0.08)] transition-all border border-transparent hover:border-[#dce5dc]">
-                                <div class="col-span-3 flex items-center gap-3 w-full md:w-auto">
-                                    <div class="h-10 w-10 shrink-0 rounded-full bg-cover bg-center"
-                                        style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDUIr9wPIg3XkiN_wjBmFnkYE2flVBcrn8qZtkxcLOjfqLLjCEM8vygLvKiljg0pGVd72b0JFvr1n0b3dl1i35YkKNoxliCYkWeYpIYYev0kcinOuxzfgzEBkWhU6twpDuW1siIbz5OeIfvRyfRAhvZ85DWhnjvVbzlq0j8_jERjhzoGgQtNCwqjwbmxUrainrMgmU4okomsWiTDl8Q7qVn_wrxe3L7JNLG3thTYkEZ2d26scTnFR14NTR-yjOc_-MqPo9_uUJAfNE");'>
-                                    </div>
-                                    <div>
-                                        <p class="font-bold text-[#121713]">Sugarcane</p>
-                                        <p class="text-xs text-[#68826b] md:hidden">Meerut, Uttar Pradesh</p>
-                                    </div>
-                                </div>
-                                <div class="col-span-3 w-full md:w-auto text-sm text-[#121713] hidden md:block">
-                                    <p class="font-medium">Meerut Mandi</p>
-                                    <p class="text-xs text-[#68826b]">Uttar Pradesh</p>
-                                </div>
-                                <div class="col-span-2 w-full md:w-auto flex justify-between md:block text-right">
-                                    <span class="text-xs font-bold text-[#68826b] md:hidden">Min Price</span>
-                                    <span class="font-medium text-[#121713]">₹340</span>
-                                </div>
-                                <div class="col-span-2 w-full md:w-auto flex justify-between md:block text-right">
-                                    <span class="text-xs font-bold text-[#68826b] md:hidden">Max Price</span>
-                                    <span class="font-bold text-[#1c5e21]">₹360</span>
-                                </div>
-                                <div class="col-span-2 w-full md:w-auto flex justify-between md:block text-right">
-                                    <span class="text-xs font-bold text-[#68826b] md:hidden">Updated</span>
-                                    <span class="text-xs text-[#68826b]">1 hour ago</span>
-                                </div>
-                            </div>
-                            <div
-                                class="group flex flex-col md:grid md:grid-cols-12 gap-2 md:gap-4 items-center rounded-xl bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_6px_rgba(0,0,0,0.08)] transition-all border border-transparent hover:border-[#dce5dc]">
-                                <div class="col-span-3 flex items-center gap-3 w-full md:w-auto">
-                                    <div
-                                        class="h-10 w-10 shrink-0 rounded-full bg-[#f8e7b5] flex items-center justify-center text-[#9c6f1a] font-bold">
-                                        MZ
-                                    </div>
-                                    <div>
-                                        <p class="font-bold text-[#121713]">Maize (Corn)</p>
-                                        <p class="text-xs text-[#68826b] md:hidden">Purnia, Bihar</p>
-                                    </div>
-                                </div>
-                                <div class="col-span-3 w-full md:w-auto text-sm text-[#121713] hidden md:block">
-                                    <p class="font-medium">Gulabbagh Mandi</p>
-                                    <p class="text-xs text-[#68826b]">Bihar</p>
-                                </div>
-                                <div class="col-span-2 w-full md:w-auto flex justify-between md:block text-right">
-                                    <span class="text-xs font-bold text-[#68826b] md:hidden">Min Price</span>
-                                    <span class="font-medium text-[#121713]">₹1,900</span>
-                                </div>
-                                <div class="col-span-2 w-full md:w-auto flex justify-between md:block text-right">
-                                    <span class="text-xs font-bold text-[#68826b] md:hidden">Max Price</span>
-                                    <span class="font-bold text-[#1c5e21]">₹2,050</span>
-                                </div>
-                                <div class="col-span-2 w-full md:w-auto flex justify-between md:block text-right">
-                                    <span class="text-xs font-bold text-[#68826b] md:hidden">Updated</span>
-                                    <span class="text-xs text-[#68826b]">2 hours ago</span>
-                                </div>
-                            </div>
-                            <div
-                                class="group flex flex-col md:grid md:grid-cols-12 gap-2 md:gap-4 items-center rounded-xl bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_6px_rgba(0,0,0,0.08)] transition-all border border-transparent hover:border-[#dce5dc]">
-                                <div class="col-span-3 flex items-center gap-3 w-full md:w-auto">
-                                    <div
-                                        class="h-10 w-10 shrink-0 rounded-full bg-[#dcfce7] flex items-center justify-center text-[#1c5e21] font-bold">
-                                        CT
-                                    </div>
-                                    <div>
-                                        <p class="font-bold text-[#121713]">Cotton</p>
-                                        <p class="text-xs text-[#68826b] md:hidden">Rajkot, Gujarat</p>
-                                    </div>
-                                </div>
-                                <div class="col-span-3 w-full md:w-auto text-sm text-[#121713] hidden md:block">
-                                    <p class="font-medium">Rajkot APMC</p>
-                                    <p class="text-xs text-[#68826b]">Gujarat</p>
-                                </div>
-                                <div class="col-span-2 w-full md:w-auto flex justify-between md:block text-right">
-                                    <span class="text-xs font-bold text-[#68826b] md:hidden">Min Price</span>
-                                    <span class="font-medium text-[#121713]">₹6,800</span>
-                                </div>
-                                <div class="col-span-2 w-full md:w-auto flex justify-between md:block text-right">
-                                    <span class="text-xs font-bold text-[#68826b] md:hidden">Max Price</span>
-                                    <span class="font-bold text-[#1c5e21]">₹7,200</span>
-                                </div>
-                                <div class="col-span-2 w-full md:w-auto flex justify-between md:block text-right">
-                                    <span class="text-xs font-bold text-[#68826b] md:hidden">Updated</span>
-                                    <span class="text-xs text-[#68826b]">3 hours ago</span>
-                                </div>
-                            </div>
+
+                        <div class="flex flex-1 min-w-[200px] flex-col gap-1">
+                            <label class="text-xs font-bold text-[#121713]">District</label>
+<input
+    id="filter-district"
+    placeholder="Type district name"
+    class="w-full rounded-lg bg-white p-2 text-sm text-[#121713] shadow-sm focus:ring-2 focus:ring-[#1c5e21]" />
+
                         </div>
-                        <div class="flex justify-center pt-6">
+
+                        <div class="flex flex-col gap-1 justify-end">
+                            <label class="text-xs font-bold text-transparent select-none">Action</label>
                             <button
-                                class="flex items-center gap-2 rounded-xl border border-[#dce5dc] bg-white px-6 py-2.5 text-sm font-bold text-[#121713] shadow-sm hover:bg-[#f1f4f1]">
-                                Load More Prices
-                                <span class="material-symbols-outlined text-lg">expand_more</span>
-                            </button>
+    onclick="applyFilters()"
+    class="flex items-center justify-center gap-2 rounded-lg bg-[#1c5e21] px-5 py-2 text-sm font-bold text-white shadow-sm hover:bg-[#144718]">
+    <span class="material-symbols-outlined text-lg">filter_alt</span>
+    Apply
+</button>
+
                         </div>
                     </div>
+
+                    <div
+                        class="hidden md:grid grid-cols-12 gap-4 px-4 py-3 border-b border-[#e0e5e0] text-sm font-bold text-[#68826b]">
+                        <div class="col-span-3">Crop Name</div>
+                        <div class="col-span-3">Mandi Location</div>
+                        <div class="col-span-2 text-right">Min Price (₹/Q)</div>
+                        <div class="col-span-2 text-right">Max Price (₹/Q)</div>
+                        <div class="col-span-2 text-right">Last Updated</div>
+                    </div>
+
+                    <div class="flex flex-col gap-2" id="market-list">
+                        </div>
+
                 </div>
             </div>
         </div>
     </div>
+</div>
+
+<script>
+// Base API URL configuration
+const API_BASE_URL = "http://127.0.0.1:8000/api/gov/market-prices/";
+
+async function loadMarketPrices() {
+  const container = document.getElementById("market-list");
+  container.innerHTML = "Loading…";
+
+  try {
+    const res = await fetch(API_BASE_URL);
+    const data = await res.json();
+    renderData(data.prices || []);
+  } catch (err) {
+    console.error(err);
+    container.innerHTML = "Failed to load market prices.";
+  }
+}
+
+function applyFilters() {
+  const crop = document.getElementById("filter-crop").value.trim();
+  const state = document.getElementById("filter-state").value.trim();
+  const district = document.getElementById("filter-district").value.trim();
+
+  let url = `${API_BASE_URL}?`;
+  if (crop) url += `crop=${encodeURIComponent(crop)}&`;
+  if (state) url += `state=${encodeURIComponent(state)}&`;
+  if (district) url += `district=${encodeURIComponent(district)}&`;
+
+  const container = document.getElementById("market-list");
+  container.innerHTML = "Filtering...";
+
+  fetch(url)
+    .then(res => {
+        if (!res.ok) throw new Error("API call failed");
+        return res.json();
+    })
+    .then(data => {
+      renderData(data.prices || []);
+    })
+    .catch(err => {
+        console.error(err);
+        container.innerHTML = "Error filtering data. Please check if your backend is running.";
+    });
+}
+
+function renderData(prices) {
+    const container = document.getElementById("market-list");
+    container.innerHTML = "";
+
+    if (prices.length === 0) {
+      container.innerHTML = "No results found.";
+      return;
+    }
+
+    prices.forEach(item => {
+      const row = document.createElement("div");
+      row.className =
+        "group flex flex-col md:grid md:grid-cols-12 gap-2 md:gap-4 items-center rounded-xl bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_6px_rgba(0,0,0,0.08)] transition-all border border-transparent hover:border-[#dce5dc]";
+
+      row.innerHTML = `
+        <div class="col-span-3 flex items-center gap-3 w-full md:w-auto">
+          <div class="h-10 w-10 shrink-0 rounded-full bg-[#f1f4f1] flex items-center justify-center font-bold">
+            ${item.crop?.[0] || "C"}
+          </div>
+          <div>
+            <p class="font-bold text-[#121713]">${item.crop}</p>
+            <p class="text-xs text-[#68826b] md:hidden">${item.market}, ${item.state}</p>
+          </div>
+        </div>
+
+        <div class="col-span-3 hidden md:block">
+          <p class="font-medium">${item.market}</p>
+          <p class="text-xs text-[#68826b]">${item.state}</p>
+        </div>
+
+        <div class="col-span-2 text-right">
+          <span class="font-medium text-[#121713]">₹${item.min_price}</span>
+        </div>
+
+        <div class="col-span-2 text-right">
+          <span class="font-bold text-[#1c5e21]">₹${item.max_price}</span>
+        </div>
+
+        <div class="col-span-2 text-right">
+          <span class="text-xs text-[#68826b]">${item.date || "N/A"}</span>
+        </div>
+      `;
+      container.appendChild(row);
+    });
+}
+
+document.addEventListener("DOMContentLoaded", loadMarketPrices);
+</script>
 
 </body>
-
 </html>
