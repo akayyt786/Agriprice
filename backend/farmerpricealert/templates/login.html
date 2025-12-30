@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 
@@ -97,7 +98,7 @@
         .image-panel {
             flex: 1.2;
             position: relative;
-            background-image: url('agriprice_bg_v2.png');
+            background-image: url("{% static 'farmerpricealert/images/agriprice_bg_v2.png' %}");
             background-size: cover;
             background-position: center;
             padding: 60px;
@@ -468,8 +469,8 @@
         <!-- Right Side: Form -->
         <div class="form-panel">
             <nav>
-                <a href="login.html" class="active">Login</a>
-                <a href="registration.html" class="register-link-nav">Try for Free</a>
+                <a href="{% url 'login_page' %}" class="active">Login</a>
+                <a href="{% url 'register_page' %}" class="register-link-nav">Try for Free</a>
             </nav>
 
             <div class="form-header">
@@ -507,7 +508,7 @@
 
 
             <div class="footer-text">
-                New to AgriPrice? <a href="registration.html">Create an account</a>
+                New to AgriPrice? <a href="{% url 'register_page' %}">Create an account</a>
             </div>
         </div>
     </div>
@@ -538,8 +539,7 @@
                 document.getElementById("msg").innerText =
                     "Logged in successfully";
 
-                window.location.href = "dashboard.html";
-
+                window.location.href = "/dashboard/";
             } catch (err) {
                 console.error(err);
                 document.getElementById("msg").innerText = "Network error";

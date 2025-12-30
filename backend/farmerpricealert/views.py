@@ -13,9 +13,18 @@ from django.shortcuts import render
 from .models import SiteContent
 from .models import DashboardImage
 
+
+def registration_page(request):
+    content = SiteContent.objects.filter(page_name="registration").first()
+    return render(request, "registration.html", {"content": content})
+
+
 def dashboard_page(request):
     images = {img.key: img for img in DashboardImage.objects.all()}
     return render(request, "dashboard.html", {"dashboard_images": images})
+
+def login_page(request):
+    return render(request, "login.html")
 
 
 
@@ -74,6 +83,3 @@ class CookieLoginView(APIView):
 
         return response
 
-def registration_page(request):
-    content = SiteContent.objects.filter(page_name="registration").first()
-    return render(request, "registration.html", {"content": content})
