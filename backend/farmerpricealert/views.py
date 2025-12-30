@@ -36,15 +36,24 @@ def login_page(request):
 # Get government market prices
 @api_view(["GET"])
 def gov_market_prices(request):
-    crop = request.GET.get("crop")
-    state = request.GET.get("state")
-    district = request.GET.get("district")
+    crop = request.GET.get("crop", "").strip()
+    state = request.GET.get("state", "").strip()
+    district = request.GET.get("district", "").strip()
 
     params = {
         "api-key": API_KEY,
         "format": "json",
         "limit": 1000      # get as much as possible
     }
+
+    # Pass filters directly to the Government API for accurate results
+    # Convert to title case since Gov API is case-sensitive
+    if state:
+        params["filters[state]"] = state.title()
+    if district:
+        params["filters[district]"] = district.title()
+    if crop:
+        params["filters[commodity]"] = crop.title()
 
     res = requests.get(BASE_URL, params=params)
 
@@ -53,21 +62,13 @@ def gov_market_prices(request):
 
     data = res.json().get("records", [])
 
-    # FILTERS
-    if crop:
-        data = [d for d in data if crop.lower() in d.get("commodity", "").lower()]
-
-    if state:
-        data = [d for d in data if state.lower() in d.get("state", "").lower()]
-
-    if district:
-        data = [d for d in data if district.lower() in d.get("district", "").lower()]
-
     formatted = []
 
     for d in data:
         formatted.append({
             "crop": d.get("commodity"),
+            "variety": d.get("variety"),
+            "grade": d.get("grade"),
             "market": d.get("market"),
             "state": d.get("state"),
             "district": d.get("district"),
@@ -77,7 +78,10 @@ def gov_market_prices(request):
             "date": d.get("arrival_date"),
         })
 
-    return Response({"prices": formatted})
+    return Response({
+        "total": len(formatted),
+        "prices": formatted
+    })
 
 
 @method_decorator(csrf_exempt, name='dispatch')
