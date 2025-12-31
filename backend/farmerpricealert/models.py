@@ -84,7 +84,8 @@ class AlertSubscription(models.Model):
     crop = models.ForeignKey(Crop, on_delete=models.CASCADE)
     market = models.ForeignKey(Market, on_delete=models.CASCADE)
 
-    target_price = models.DecimalField(max_digits=10, decimal_places=2)
+    target_min = models.DecimalField(max_digits=10, decimal_places=2)
+    target_max = models.DecimalField(max_digits=10, decimal_places=2)
 
     STATUS_CHOICES = (
         ("active", "Active"),

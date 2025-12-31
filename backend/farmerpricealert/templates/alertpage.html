@@ -56,6 +56,11 @@
                         <div class="flex min-w-72 flex-col gap-3">
                             <p class="text-[#111811] tracking-light text-[32px] font-bold leading-tight">My Price Alerts
                             </p>
+                            <button onclick="openCreateForm()"
+                                class="mt-4 rounded-xl bg-[#1c5e21] text-white px-4 py-2 text-sm font-bold">
+                                + Create New Alert
+                            </button>
+
                             <p class="text-[#618961] text-sm font-normal leading-normal">Manage your active and past
                                 price alerts for various commodities and markets.</p>
                         </div>
@@ -91,92 +96,14 @@
                                         </th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    <tr class="border-t border-t-[#dbe6db]">
-                                        <td
-                                            class="table-6ce4dc21-5155-4d21-bb97-42895619da65-column-120 h-[72px] px-4 py-2 w-[400px] text-[#111811] text-sm font-normal leading-normal">
-                                            Wheat</td>
-                                        <td
-                                            class="table-6ce4dc21-5155-4d21-bb97-42895619da65-column-240 h-[72px] px-4 py-2 w-[400px] text-[#618961] text-sm font-normal leading-normal">
-                                            Delhi Market
-                                        </td>
-                                        <td
-                                            class="table-6ce4dc21-5155-4d21-bb97-42895619da65-column-360 h-[72px] px-4 py-2 w-[400px] text-[#618961] text-sm font-normal leading-normal">
-                                            ₹2,500/Quintal
-                                        </td>
-                                        <td
-                                            class="table-6ce4dc21-5155-4d21-bb97-42895619da65-column-480 h-[72px] px-4 py-2 w-[400px] text-[#618961] text-sm font-normal leading-normal">
-                                            ₹2,450/Quintal
-                                        </td>
-                                        <td
-                                            class="table-6ce4dc21-5155-4d21-bb97-42895619da65-column-600 h-[72px] px-4 py-2 w-60 text-sm font-normal leading-normal">
-                                            <button
-                                                class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-8 px-4 bg-[#f0f4f0] text-[#111811] text-sm font-medium leading-normal w-full">
-                                                <span class="truncate">Active</span>
-                                            </button>
-                                        </td>
-                                        <td
-                                            class="table-6ce4dc21-5155-4d21-bb97-42895619da65-column-720 h-[72px] px-4 py-2 w-60 text-[#618961] text-sm font-bold leading-normal tracking-[0.015em]">
-                                            Edit | Delete
-                                        </td>
-                                    </tr>
-                                    <tr class="border-t border-t-[#dbe6db]">
-                                        <td
-                                            class="table-6ce4dc21-5155-4d21-bb97-42895619da65-column-120 h-[72px] px-4 py-2 w-[400px] text-[#111811] text-sm font-normal leading-normal">
-                                            Rice</td>
-                                        <td
-                                            class="table-6ce4dc21-5155-4d21-bb97-42895619da65-column-240 h-[72px] px-4 py-2 w-[400px] text-[#618961] text-sm font-normal leading-normal">
-                                            Mumbai Market
-                                        </td>
-                                        <td
-                                            class="table-6ce4dc21-5155-4d21-bb97-42895619da65-column-360 h-[72px] px-4 py-2 w-[400px] text-[#618961] text-sm font-normal leading-normal">
-                                            ₹3,000/Quintal
-                                        </td>
-                                        <td
-                                            class="table-6ce4dc21-5155-4d21-bb97-42895619da65-column-480 h-[72px] px-4 py-2 w-[400px] text-[#618961] text-sm font-normal leading-normal">
-                                            ₹3,050/Quintal
-                                        </td>
-                                        <td
-                                            class="table-6ce4dc21-5155-4d21-bb97-42895619da65-column-600 h-[72px] px-4 py-2 w-60 text-sm font-normal leading-normal">
-                                            <button
-                                                class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-8 px-4 bg-[#f0f4f0] text-[#111811] text-sm font-medium leading-normal w-full">
-                                                <span class="truncate">Triggered</span>
-                                            </button>
-                                        </td>
-                                        <td
-                                            class="table-6ce4dc21-5155-4d21-bb97-42895619da65-column-720 h-[72px] px-4 py-2 w-60 text-[#618961] text-sm font-bold leading-normal tracking-[0.015em]">
-                                            Edit | Delete
-                                        </td>
-                                    </tr>
-                                    <tr class="border-t border-t-[#dbe6db]">
-                                        <td
-                                            class="table-6ce4dc21-5155-4d21-bb97-42895619da65-column-120 h-[72px] px-4 py-2 w-[400px] text-[#111811] text-sm font-normal leading-normal">
-                                            Cotton</td>
-                                        <td
-                                            class="table-6ce4dc21-5155-4d21-bb97-42895619da65-column-240 h-[72px] px-4 py-2 w-[400px] text-[#618961] text-sm font-normal leading-normal">
-                                            Ahmedabad Market
-                                        </td>
-                                        <td
-                                            class="table-6ce4dc21-5155-4d21-bb97-42895619da65-column-360 h-[72px] px-4 py-2 w-[400px] text-[#618961] text-sm font-normal leading-normal">
-                                            ₹6,000/Quintal
-                                        </td>
-                                        <td
-                                            class="table-6ce4dc21-5155-4d21-bb97-42895619da65-column-480 h-[72px] px-4 py-2 w-[400px] text-[#618961] text-sm font-normal leading-normal">
-                                            ₹5,900/Quintal
-                                        </td>
-                                        <td
-                                            class="table-6ce4dc21-5155-4d21-bb97-42895619da65-column-600 h-[72px] px-4 py-2 w-60 text-sm font-normal leading-normal">
-                                            <button
-                                                class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-8 px-4 bg-[#f0f4f0] text-[#111811] text-sm font-medium leading-normal w-full">
-                                                <span class="truncate">Active</span>
-                                            </button>
-                                        </td>
-                                        <td
-                                            class="table-6ce4dc21-5155-4d21-bb97-42895619da65-column-720 h-[72px] px-4 py-2 w-60 text-[#618961] text-sm font-bold leading-normal tracking-[0.015em]">
-                                            Edit | Delete
+                                <tbody id="active-alerts-body">
+                                    <tr>
+                                        <td class="px-4 py-2 text-sm text-[#618961]">
+                                            Loading alerts...
                                         </td>
                                     </tr>
                                 </tbody>
+
                             </table>
                         </div>
                         <style>
@@ -243,57 +170,14 @@
                                             Date</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    <tr class="border-t border-t-[#dbe6db]">
-                                        <td
-                                            class="table-d2a59f62-0c68-443b-b006-cbb92e4ef346-column-120 h-[72px] px-4 py-2 w-[400px] text-[#111811] text-sm font-normal leading-normal">
-                                            Sugarcane
-                                        </td>
-                                        <td
-                                            class="table-d2a59f62-0c68-443b-b006-cbb92e4ef346-column-240 h-[72px] px-4 py-2 w-[400px] text-[#618961] text-sm font-normal leading-normal">
-                                            Lucknow Market
-                                        </td>
-                                        <td
-                                            class="table-d2a59f62-0c68-443b-b006-cbb92e4ef346-column-360 h-[72px] px-4 py-2 w-[400px] text-[#618961] text-sm font-normal leading-normal">
-                                            ₹350/Quintal
-                                        </td>
-                                        <td
-                                            class="table-d2a59f62-0c68-443b-b006-cbb92e4ef346-column-480 h-[72px] px-4 py-2 w-60 text-sm font-normal leading-normal">
-                                            <button
-                                                class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-8 px-4 bg-[#f0f4f0] text-[#111811] text-sm font-medium leading-normal w-full">
-                                                <span class="truncate">Fulfilled</span>
-                                            </button>
-                                        </td>
-                                        <td
-                                            class="table-d2a59f62-0c68-443b-b006-cbb92e4ef346-column-600 h-[72px] px-4 py-2 w-[400px] text-[#618961] text-sm font-normal leading-normal">
-                                            2024-07-15
-                                        </td>
-                                    </tr>
-                                    <tr class="border-t border-t-[#dbe6db]">
-                                        <td
-                                            class="table-d2a59f62-0c68-443b-b006-cbb92e4ef346-column-120 h-[72px] px-4 py-2 w-[400px] text-[#111811] text-sm font-normal leading-normal">
-                                            Maize</td>
-                                        <td
-                                            class="table-d2a59f62-0c68-443b-b006-cbb92e4ef346-column-240 h-[72px] px-4 py-2 w-[400px] text-[#618961] text-sm font-normal leading-normal">
-                                            Pune Market
-                                        </td>
-                                        <td
-                                            class="table-d2a59f62-0c68-443b-b006-cbb92e4ef346-column-360 h-[72px] px-4 py-2 w-[400px] text-[#618961] text-sm font-normal leading-normal">
-                                            ₹1,800/Quintal
-                                        </td>
-                                        <td
-                                            class="table-d2a59f62-0c68-443b-b006-cbb92e4ef346-column-480 h-[72px] px-4 py-2 w-60 text-sm font-normal leading-normal">
-                                            <button
-                                                class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-8 px-4 bg-[#f0f4f0] text-[#111811] text-sm font-medium leading-normal w-full">
-                                                <span class="truncate">Expired</span>
-                                            </button>
-                                        </td>
-                                        <td
-                                            class="table-d2a59f62-0c68-443b-b006-cbb92e4ef346-column-600 h-[72px] px-4 py-2 w-[400px] text-[#618961] text-sm font-normal leading-normal">
-                                            2024-06-20
+                                <tbody id="past-alerts-body">
+                                    <tr>
+                                        <td class="px-4 py-2 text-sm text-[#618961]">
+                                            Loading alerts...
                                         </td>
                                     </tr>
                                 </tbody>
+
                             </table>
                         </div>
                         <style>
@@ -332,6 +216,184 @@
             </div>
         </div>
     </div>
+    <script>
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== "") {
+                const cookies = document.cookie.split(";");
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + "=")) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+
+            fetch("/api/alerts/", {
+                credentials: "include"
+            })
+                .then(res => res.json())
+                .then(data => {
+                    renderActiveAlerts(data.active);
+                    renderPastAlerts(data.history);
+                })
+                .catch(() => {
+                    alert("Unable to load alerts");
+                });
+
+        });
+        function openCreateForm() {
+            document.getElementById("alert-form").classList.remove("hidden");
+        }
+
+        function closeCreateForm() {
+            document.getElementById("alert-form").classList.add("hidden");
+        }
+
+
+        function renderActiveAlerts(alerts) {
+            const tbody = document.getElementById("active-alerts-body");
+            tbody.innerHTML = "";
+
+            if (!alerts.length) {
+                tbody.innerHTML = `
+            <tr>
+                <td class="px-4 py-2 text-sm text-[#618961]">
+                    No active alerts yet.
+                </td>
+            </tr>
+        `;
+                return;
+            }
+
+            alerts.forEach(a => {
+                tbody.innerHTML += `
+            <tr class="border-t border-[#dbe6db]">
+                <td class="px-4 py-2 text-sm">${a.crop}</td>
+                <td class="px-4 py-2 text-sm text-[#618961]">${a.market}</td>
+                <td class="px-4 py-2 text-sm text-[#618961]">
+                    ₹${a.target_min} - ₹${a.target_max}
+                </td>
+
+                <td class="px-4 py-2 text-sm text-[#618961]">—</td>
+
+                <td class="px-4 py-2">
+                    <button class="rounded-xl bg-[#f0f4f0] px-4 py-1 text-sm">
+                        ${a.status}
+                    </button>
+                </td>
+
+                <td class="px-4 py-2 text-sm text-[#618961] font-bold">
+                    Edit | Delete
+                </td>
+            </tr>
+        `;
+            });
+        }
+
+
+        function renderPastAlerts(alerts) {
+            const tbody = document.getElementById("past-alerts-body");
+            tbody.innerHTML = "";
+
+            if (!alerts.length) {
+                tbody.innerHTML = `
+            <tr>
+                <td class="px-4 py-2 text-sm text-[#618961]">
+                    No past alerts yet.
+                </td>
+            </tr>
+        `;
+                return;
+            }
+
+            alerts.forEach(a => {
+                tbody.innerHTML += `
+            <tr class="border-t border-[#dbe6db]">
+                <td class="px-4 py-2 text-sm">${a.crop}</td>
+                <td class="px-4 py-2 text-sm text-[#618961]">${a.market}</td>
+                <td class="px-4 py-2 text-sm text-[#618961]">₹${a.price_reached}</td>
+
+                <td class="px-4 py-2">
+                    <button class="rounded-xl bg-[#f0f4f0] px-4 py-1 text-sm">
+                        ${a.status}
+                    </button>
+                </td>
+
+                <td class="px-4 py-2 text-sm text-[#618961]">
+                    ${a.date}
+                </td>
+            </tr>
+        `;
+            });
+        }
+        function submitAlert() {
+
+            const crop = document.getElementById("alert-crop").value;
+            const market = document.getElementById("alert-market").value;
+            const min = document.getElementById("alert-min").value;
+            const max = document.getElementById("alert-max").value;
+
+            if (!crop || !market || !min || !max) {
+                alert("Please fill all fields");
+                return;
+            }
+
+            fetch("/api/alerts/create/", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": getCookie("csrftoken")
+                },
+                credentials: "include",
+                body: JSON.stringify({
+                    crop: crop,
+                    market: market,
+                    min_price: min,
+                    max_price: max
+                })
+            })
+                .then(res => res.json())
+                .then(d => {
+                    alert(d.message || "Alert created");
+                    location.reload();
+                });
+        }
+
+    </script>
+    <div id="alert-form" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center">
+
+        <div class="bg-white rounded-xl p-6 w-[400px] space-y-4">
+
+            <h3 class="text-lg font-bold">Create Price Alert</h3>
+
+            <input id="alert-crop" placeholder="Crop name" class="w-full border p-2 rounded-lg" />
+
+            <input id="alert-market" placeholder="District name" class="w-full border p-2 rounded-lg" />
+
+            <input id="alert-min" type="number" placeholder="Minimum price" class="w-full border p-2 rounded-lg" />
+
+            <input id="alert-max" type="number" placeholder="Maximum price" class="w-full border p-2 rounded-lg" />
+
+
+            <div class="flex justify-end gap-3">
+                <button onclick="closeCreateForm()" class="px-4 py-2 rounded-xl bg-gray-200">
+                    Cancel
+                </button>
+
+                <button onclick="submitAlert()" class="px-4 py-2 rounded-xl bg-[#1c5e21] text-white">
+                    Save
+                </button>
+            </div>
+
+        </div>
+    </div>
+
 </body>
 
 </html>

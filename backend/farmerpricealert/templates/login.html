@@ -515,7 +515,6 @@
     </div>
 
     <script>
-        lucide.createIcons();
         function getCookie(name) {
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
@@ -530,6 +529,8 @@
             }
             return cookieValue;
         }
+        lucide.createIcons();
+        
 
         async function loginUser() {
             const username = document.getElementById("email").value;

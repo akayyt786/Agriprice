@@ -18,9 +18,11 @@ from .models import SiteContent
 from .models import DashboardImage,UserProfile
 import random
 import requests
-from rest_framework.permissions import IsAuthenticated
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from .authenticate import CookieJWTAuthentication
+from .models import AlertSubscription, AlertHistory, MarketPrice
+from .models import Crop, Market
 
 BASE_URL = "https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070"
 API_KEY = "579b464db66ec23bdd00000162112b7dd11f40117613f282ddc07b6e"
@@ -42,6 +44,9 @@ def login_page(request):
 
 def profile_page(request):
     return render(request, "profile.html")
+def alerts_page(request):
+    return render(request, "alertpage.html")
+
 
 # Get government market prices
 @api_view(["GET"])
@@ -148,6 +153,79 @@ class CookieLoginView(APIView):
             samesite="Lax",
             path="/",
         )
+        return response
+@api_view(["GET"])
+@authentication_classes([CookieJWTAuthentication, SessionAuthentication])
+@permission_classes([IsAuthenticated])
+def get_alerts(request):
+    user = request.user
+
+    active_alerts = AlertSubscription.objects.filter(user=user)
+
+    past_alerts = AlertHistory.objects.filter(
+        subscription__user=user
+    ).select_related("price", "subscription")
+
+    return Response({
+        "active": [
+            {
+                "id": a.id,
+                "crop": a.crop.name,
+                "market": a.market.name,
+                "target_min": str(a.target_min),
+                "target_max": str(a.target_max),
+                "status": a.status,
+                "created_at": a.created_at
+            }
+            for a in active_alerts
+        ],
+        "history": [
+            {
+                "id": h.id,
+                "crop": h.subscription.crop.name,
+                "market": h.subscription.market.name,
+                "price_reached": str(h.price.modal_price),
+                "status": h.subscription.status,
+                "date": h.created_at
+            }
+            for h in past_alerts
+        ]
+    })
+@csrf_exempt
+@api_view(["POST"])
+@authentication_classes([CookieJWTAuthentication, SessionAuthentication])
+@permission_classes([IsAuthenticated])
+def create_alert(request):
+    user = request.user
+
+    # Get the names typed by the user
+    crop_name = request.data.get("crop")
+    market_name = request.data.get("market")
+    min_price = request.data.get("min_price")
+    max_price = request.data.get("max_price")
+
+    if not crop_name or not market_name or not min_price or not max_price:
+        return Response({"error": "All fields are required"}, status=400)
+
+    # 1. Find the Crop (or create it if it doesn't exist)
+    crop_obj, _ = Crop.objects.get_or_create(name__iexact=crop_name, defaults={'name': crop_name})
+    
+    # 2. Find the Market (or create it if it doesn't exist)
+    market_obj, _ = Market.objects.get_or_create(
+        name__iexact=market_name, 
+        defaults={'name': market_name, 'state': 'India', 'district': market_name}
+    )
+
+    # 3. Create the Alert using the OBJECTS we found above
+    alert = AlertSubscription.objects.create(
+        user=user,
+        crop=crop_obj,
+        market=market_obj,
+        target_min=min_price,
+        target_max=max_price,
+    )
+
+    return Response({"message": "Alert created successfully", "id": alert.id})
 @api_view(["GET"])
 @authentication_classes([CookieJWTAuthentication, SessionAuthentication])
 @permission_classes([IsAuthenticated])
