@@ -479,6 +479,7 @@
             </div>
 
             <form class="login-form" onsubmit="event.preventDefault(); loginUser();">
+                {% csrf_token %}
                 <div class="input-group">
                     <label for="email">Username</label>
                     <div class="input-wrapper">
@@ -515,14 +516,32 @@
 
     <script>
         lucide.createIcons();
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
         async function loginUser() {
             const username = document.getElementById("email").value;
             const password = document.getElementById("password").value;
 
             try {
-                const res = await fetch("http://127.0.0.1:8000/api/login-cookie/", {
+                const res = await fetch("/api/login-cookie/", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": getCookie('csrftoken')
+                    },
                     credentials: "include",   // send & receive cookies
                     body: JSON.stringify({ username, password })
                 });

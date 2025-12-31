@@ -381,6 +381,7 @@
                 <p>Join the community and start trading smarter today.</p>
             </div>
             <form id="registerForm">
+                {% csrf_token %}
                 <div class="input-group">
                     <label for="fullname">Full Name</label>
                     <div class="input-wrapper">
@@ -415,6 +416,21 @@
     </div>
     <script>lucide.createIcons();</script>
     <script>
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
         document.getElementById("registerForm").addEventListener("submit", async function (e) {
             e.preventDefault(); // stop page reload
 
@@ -422,10 +438,15 @@
             const email = document.getElementById("email").value;
             const password = document.getElementById("password").value;
 
+            const headers = {
+                "Content-Type": "application/json",
+                "X-CSRFToken": getCookie('csrftoken')
+            };
+
             try {
-                const res = await fetch("http://127.0.0.1:8000/api/register/", {
+                const res = await fetch("/api/register/", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: headers,
                     body: JSON.stringify({
                         username: fullname,   // Django needs username
                         email: email,
@@ -436,7 +457,11 @@
                 const data = await res.json();
 
                 if (!res.ok) {
-                    alert("Registration failed");
+                    let errorDetails = "";
+                    for (const key in data) {
+                        errorDetails += `${key}: ${data[key]}\n`;
+                    }
+                    alert("Registration failed:\n" + (errorDetails || "Unknown error"));
                     console.log(data);
                     return;
                 }

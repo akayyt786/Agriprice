@@ -1,3 +1,4 @@
+from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth import authenticate
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -15,7 +16,10 @@ from .models import DashboardImage
 import random
 import requests
 
-from rest_framework.decorators import api_view
+
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from .authenticate import CookieJWTAuthentication
 BASE_URL = "https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070"
 API_KEY = "579b464db66ec23bdd00000162112b7dd11f40117613f282ddc07b6e"
 
@@ -32,9 +36,12 @@ def dashboard_page(request):
 
 def login_page(request):
     return render(request, "login.html")
+from rest_framework.authentication import SessionAuthentication
 
 # Get government market prices
 @api_view(["GET"])
+@authentication_classes([CookieJWTAuthentication, SessionAuthentication])
+@permission_classes([IsAuthenticated])
 def gov_market_prices(request):
     crop = request.GET.get("crop", "").strip()
     state = request.GET.get("state", "").strip()
@@ -125,6 +132,7 @@ class CookieLoginView(APIView):
             httponly=True,   # JavaScript cannot read it
             secure=False,    # change to True when using HTTPS
             samesite="Lax",
+            path="/",
         )
 
         response.set_cookie(
@@ -133,7 +141,12 @@ class CookieLoginView(APIView):
             httponly=True,
             secure=False,
             samesite="Lax",
+            path="/",
         )
 
-        return response
+def logout_user(request):
+    response = JsonResponse({"message": "Logged out successfully"})
+    response.delete_cookie("access", path="/")
+    response.delete_cookie("refresh", path="/")
+    return response
 
