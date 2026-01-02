@@ -117,6 +117,13 @@
 
                             </div>
 
+                            <div class="flex flex-1 min-w-[200px] flex-col gap-1">
+                                <label class="text-xs font-bold text-[#121713]">Mandi Name</label>
+                                <input id="filter-mandi" placeholder="Type mandi name"
+                                    class="w-full rounded-lg bg-white p-2 text-sm text-[#121713] shadow-sm focus:ring-2 focus:ring-[#1c5e21]" />
+
+                            </div>
+
                             <div class="flex flex-col gap-1 justify-end">
                                 <label class="text-xs font-bold text-transparent select-none">Action</label>
                                 <button onclick="applyFilters()"
@@ -170,11 +177,13 @@
             const crop = document.getElementById("filter-crop").value.trim();
             const state = document.getElementById("filter-state").value.trim();
             const district = document.getElementById("filter-district").value.trim();
+            const mandi = document.getElementById("filter-mandi").value.trim();
 
             const url = new URL(API_BASE_URL, window.location.origin);
             if (crop) url.searchParams.append('crop', crop);
             if (state) url.searchParams.append('state', state);
             if (district) url.searchParams.append('district', district);
+            if (mandi) url.searchParams.append('mandi', mandi);
             url.searchParams.append('_t', Date.now()); // Cache buster
 
             const container = document.getElementById("market-list");

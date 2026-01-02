@@ -260,15 +260,14 @@
             const tbody = document.getElementById("active-alerts-body");
             tbody.innerHTML = "";
 
-            if (!alerts.length) {
+            if (!alerts || alerts.length === 0) {
                 tbody.innerHTML = `
-<tr>
-    <td class="px-4 py-2 text-sm text-[#618961]">
-        ₹${a.current_price || "N/A"}
-    </td>
-
-</tr>
-`;
+                    <tr>
+                        <td colspan="6" class="px-4 py-8 text-center text-[#618961]">
+                            No active alerts yet.
+                        </td>
+                    </tr>
+                `;
                 return;
             }
 

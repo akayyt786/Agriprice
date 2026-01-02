@@ -2,7 +2,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import SessionAuthentication
 from django.contrib.auth import authenticate
 from datetime import datetime
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError, transaction, models
 from django.contrib.auth.decorators import login_required
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -17,19 +17,15 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.shortcuts import render
 from .models import (
-            SiteContent,
-            DashboardImage,
-            UserProfile,
-            AlertSubscription,
-            AlertHistory,
-            MarketPrice,
-            Crop,
-            Market,
-            AlertSubscription,
-            AlertHistory,
-            Crop,
-            Market,
-   )
+    SiteContent,
+    DashboardImage,
+    UserProfile,
+    AlertSubscription,
+    AlertHistory,
+    MarketPrice,
+    Crop,
+    Market
+)
 import random
 import requests
 from django.views.decorators.csrf import csrf_exempt
@@ -81,6 +77,7 @@ def gov_market_prices(request):
     crop = request.GET.get("crop", "").strip()
     state = request.GET.get("state", "").strip()
     district = request.GET.get("district", "").strip()
+    mandi = request.GET.get("mandi", "").strip()
 
     params = {
         "api-key": API_KEY,
@@ -89,18 +86,62 @@ def gov_market_prices(request):
     }
 
     # Pass filters directly to the Government API for accurate results
-    # Convert to title case since Gov API is case-sensitive
     if state:
         params["filters[state]"] = state.title()
     if district:
         params["filters[district]"] = district.title()
     if crop:
         params["filters[commodity]"] = crop.title()
+    if mandi:
+        params["filters[market]"] = mandi.title()
 
-    res = requests.get(BASE_URL, params=params)
+    try:
+        res = requests.get(BASE_URL, params=params, timeout=10)
+        api_failed = (res.status_code != 200)
+    except Exception as e:
+        print(f"--- ERROR: Gov API Connection Failed: {str(e)}")
+        api_failed = True
 
-    if res.status_code != 200:
-        return Response({"error": "Gov API not responding"}, status=500)
+    if api_failed:
+        # FALLBACK: Use local database if Gov API is down
+        print("--- WARNING: Gov API down, falling back to local database")
+        
+        # Build local query based on filters
+        local_prices = MarketPrice.objects.select_related("crop", "market").all()
+        
+        if state:
+            local_prices = local_prices.filter(market__state__icontains=state)
+        if district:
+            local_prices = local_prices.filter(market__district__icontains=district)
+        if crop:
+            local_prices = local_prices.filter(crop__name__icontains=crop)
+        if mandi:
+            local_prices = local_prices.filter(market__name__icontains=mandi)
+            
+        local_prices = local_prices.order_by("-arrival_date")[:1000]
+        
+        formatted = []
+        for p in local_prices:
+            formatted.append({
+                "date": p.arrival_date.strftime("%d/%m/%Y") if p.arrival_date else "N/A",
+                "crop_name": p.crop.name.title(),
+                "crop": p.crop.name.title(),
+                "mandi_name": p.market.name.title(),
+                "commodity": p.crop.name.title(),
+                "market": p.market.name.title(),
+                "state": p.market.state,
+                "district": p.market.district,
+                "min_price": str(p.min_price),
+                "max_price": str(p.max_price),
+                "modal_price": str(p.modal_price),
+                "source": "local_cache"
+            })
+            
+        return Response({
+            "total": len(formatted),
+            "prices": formatted,
+            "warning": "External API is currently unavailable. Showing latest cached data."
+        })
 
     data = res.json().get("records", [])
 
@@ -119,12 +160,15 @@ def gov_market_prices(request):
         curr_state = d.get("state", "").lower()
         curr_dist = d.get("district", "").lower()
         curr_comm = d.get("commodity", "").lower()
+        curr_mkt = d.get("market", "").lower()
 
         if state and state.lower() not in curr_state:
             continue
         if district and district.lower() not in curr_dist:
             continue
         if crop and crop.lower() not in curr_comm:
+            continue
+        if mandi and mandi.lower() not in curr_mkt:
             continue
 
         # 2. Database Synchronization
@@ -136,13 +180,35 @@ def gov_market_prices(request):
             except:
                 formatted_date = None
 
-        # Normalize names to lowercase to avoid duplicates
+        if not formatted_date:
+            continue
         crop_name_raw = d.get("commodity", "N/A").lower()
         market_name_raw = d.get("market", "N/A").lower()
-
         crop_obj, _ = Crop.objects.get_or_create(name=crop_name_raw)
-        market_obj, _ = Market.objects.get_or_create(name=market_name_raw)
+
+        market_obj, created = Market.objects.get_or_create(
+            name=market_name_raw,
+            defaults={
+                "state": d.get("state", "India"),
+                "district": d.get("district", market_name_raw)
+            }
+        )
         
+        # 🔥 CRITICAL: Update existing Market if district/state is missing or "N/A"
+        dist_raw = d.get("district")
+        state_raw = d.get("state")
+        
+        needs_save = False
+        if dist_raw and (not market_obj.district or market_obj.district == "N/A" or market_obj.district == ""):
+            market_obj.district = dist_raw
+            needs_save = True
+        if state_raw and (not market_obj.state or market_obj.state == "N/A" or market_obj.state == ""):
+            market_obj.state = state_raw
+            needs_save = True
+            
+        if needs_save:
+            market_obj.save()
+
         price_obj, _ = MarketPrice.objects.get_or_create(
             crop=crop_obj,
             market=market_obj,
@@ -155,9 +221,15 @@ def gov_market_prices(request):
         )
 
         # Process Alerts
-        alerts = AlertSubscription.objects.filter(crop=crop_obj, market=market_obj, status="active")
+        # Find alerts that match this specific Mandi OR match the District name of this Mandi
+        alerts = AlertSubscription.objects.filter(
+            models.Q(market=market_obj) | models.Q(market__name__iexact=market_obj.district),
+            crop=crop_obj, 
+            status="active"
+        )
         for alert in alerts:
-            process_alert(alert, price_obj)
+            message = f"Market Alert: {crop_obj.name.title()} is available in {market_obj.name.title()} mandi at price range {price_obj.min_price}-{price_obj.max_price}."
+            process_alert(alert, price_obj, message)
 
         # 3. Format result for Frontend
         comm = get_field(d, ["commodity", "Commodity"])
@@ -290,13 +362,13 @@ def get_alerts(request):
         "current_price": (
             str(
                 MarketPrice.objects.filter(
-                    crop=a.crop,
-                    market=a.market
+                    models.Q(market=a.market) | models.Q(market__district__iexact=a.market.name),
+                    crop=a.crop
                 ).order_by("-arrival_date").first().modal_price
             )
             if MarketPrice.objects.filter(
-                crop=a.crop,
-                market=a.market
+                models.Q(market=a.market) | models.Q(market__district__iexact=a.market.name),
+                crop=a.crop
             ).exists()
             else None
         )
@@ -317,7 +389,7 @@ def get_alerts(request):
     })
 
 
-def process_alert(alert, price_obj):
+def process_alert(alert, price_obj, message):
     user_min = float(alert.target_min)
     user_max = float(alert.target_max)
 
@@ -337,7 +409,8 @@ def process_alert(alert, price_obj):
 
             AlertHistory.objects.create(
                 subscription=alert,
-                price=price_obj
+                price=price_obj,
+                message=message
             )
 
             return True
@@ -354,7 +427,6 @@ def process_alert(alert, price_obj):
 def create_alert(request):
     user = request.user
 
-    # Get the names typed by the user
     crop_name = request.data.get("crop")
     market_name = request.data.get("market")
     min_price = request.data.get("min_price")
@@ -363,21 +435,23 @@ def create_alert(request):
     if not crop_name or not market_name or not min_price or not max_price:
         return Response({"error": "All fields are required"}, status=400)
 
-    # Normalize to lowercase to prevent duplicates (e.g., 'Wheat' vs 'wheat')
     crop_name = crop_name.strip().lower()
     market_name = market_name.strip().lower()
 
-    # 1. Find the Crop (or create it if it doesn't exist)
-    # Using name=crop_name now since we normalized it
     crop_obj, _ = Crop.objects.get_or_create(name=crop_name)
-    
-    # 2. Find the Market (or create it if it doesn't exist)
-    market_obj, _ = Market.objects.get_or_create(
-        name=market_name, 
-        defaults={'state': 'India', 'district': market_name}
-    )
 
-    # 3. Create the Alert using the OBJECTS we found above
+    # 🔥 MATCH BY DISTRICT FIRST
+    market_obj = Market.objects.filter(
+        district__icontains=market_name
+    ).first()
+
+    if not market_obj:
+        market_obj = Market.objects.create(
+            name=market_name,
+            state="India",
+            district=market_name
+        )
+
     alert = AlertSubscription.objects.create(
         user=user,
         crop=crop_obj,
@@ -387,6 +461,7 @@ def create_alert(request):
     )
 
     return Response({"message": "Alert created successfully", "id": alert.id})
+
 
 
 @api_view(["GET"])
