@@ -9,7 +9,7 @@ from .views import (
     gov_market_prices,
     market_prices_page,
     profile_page,
-    alerts_page,get_profile,get_alerts,create_alert
+    alerts_page,get_profile,get_alerts,create_alert,get_past_alerts
 )
 from django.views.decorators.csrf import csrf_exempt
 from .views import update_profile, change_password, delete_account
@@ -21,6 +21,8 @@ urlpatterns = [
     path("login/", login_page, name="login_page"),
     path("profile/", profile_page, name="profile_page"),
     path("alerts/", alerts_page, name="alerts_page"),
+    path("api/alerts/past/", get_past_alerts, name="past-alerts"),
+
 
 
 

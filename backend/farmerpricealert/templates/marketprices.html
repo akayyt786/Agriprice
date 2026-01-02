@@ -171,25 +171,26 @@
             const state = document.getElementById("filter-state").value.trim();
             const district = document.getElementById("filter-district").value.trim();
 
-            let url = `${API_BASE_URL}?`;
-            if (crop) url += `crop=${encodeURIComponent(crop)}&`;
-            if (state) url += `state=${encodeURIComponent(state)}&`;
-            if (district) url += `district=${encodeURIComponent(district)}&`;
+            const url = new URL(API_BASE_URL, window.location.origin);
+            if (crop) url.searchParams.append('crop', crop);
+            if (state) url.searchParams.append('state', state);
+            if (district) url.searchParams.append('district', district);
+            url.searchParams.append('_t', Date.now()); // Cache buster
 
             const container = document.getElementById("market-list");
             container.innerHTML = "Filtering...";
 
+            console.log("Fetching from:", url.toString());
+
             fetch(url, { credentials: "include" })
-                .then(res => {
-                    if (!res.ok) throw new Error("API call failed");
-                    return res.json();
-                })
+                .then(res => res.json())
                 .then(data => {
+                    console.log("Filter Result:", data);
                     renderData(data.prices || []);
                 })
                 .catch(err => {
                     console.error(err);
-                    container.innerHTML = "Error filtering data. Please check if your backend is running.";
+                    container.innerHTML = "Error filtering data.";
                 });
         }
 
@@ -197,7 +198,7 @@
             const container = document.getElementById("market-list");
             container.innerHTML = "";
 
-            if (prices.length === 0) {
+            if (!prices || prices.length === 0) {
                 container.innerHTML = "No results found.";
                 return;
             }
@@ -207,34 +208,39 @@
                 row.className =
                     "group flex flex-col md:grid md:grid-cols-12 gap-2 md:gap-4 items-center rounded-xl bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_6px_rgba(0,0,0,0.08)] transition-all border border-transparent hover:border-[#dce5dc]";
 
+                // Powerful defensive check for all possible keys
+                const cropName = item.crop_name || item.crop || item.commodity || "N/A";
+                const mandiName = item.mandi_name || item.market || "N/A";
+                const stateName = item.state || "N/A";
+
                 row.innerHTML = `
-        <div class="col-span-3 flex items-center gap-3 w-full md:w-auto">
-          <div class="h-10 w-10 shrink-0 rounded-full bg-[#f1f4f1] flex items-center justify-center font-bold">
-            ${item.crop?.[0] || "C"}
-          </div>
-          <div>
-            <p class="font-bold text-[#121713]">${item.crop}</p>
-            <p class="text-xs text-[#68826b] md:hidden">${item.market}, ${item.state}</p>
-          </div>
-        </div>
+                    <div class="col-span-3 flex items-center gap-3 w-full md:w-auto">
+                      <div class="h-10 w-10 shrink-0 rounded-full bg-[#f1f4f1] flex items-center justify-center font-bold">
+                        ${cropName.substring(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <p class="font-bold text-[#121713]">${cropName}</p>
+                        <p class="text-xs text-[#68826b] md:hidden">${mandiName}, ${stateName}</p>
+                      </div>
+                    </div>
 
-        <div class="col-span-3 hidden md:block">
-          <p class="font-medium">${item.market}</p>
-          <p class="text-xs text-[#68826b]">${item.state}</p>
-        </div>
+                    <div class="col-span-3 hidden md:block">
+                      <p class="font-medium">${mandiName}</p>
+                      <p class="text-xs text-[#68826b]">${stateName}</p>
+                    </div>
 
-        <div class="col-span-2 text-right">
-          <span class="font-medium text-[#121713]">₹${item.min_price}</span>
-        </div>
+                    <div class="col-span-2 text-right">
+                      <span class="font-medium text-[#121713]">₹${item.min_price || '0'}</span>
+                    </div>
 
-        <div class="col-span-2 text-right">
-          <span class="font-bold text-[#1c5e21]">₹${item.max_price}</span>
-        </div>
+                    <div class="col-span-2 text-right">
+                      <span class="font-bold text-[#1c5e21]">₹${item.max_price || '0'}</span>
+                    </div>
 
-        <div class="col-span-2 text-right">
-          <span class="text-xs text-[#68826b]">${item.date || "N/A"}</span>
-        </div>
-      `;
+                    <div class="col-span-2 text-right">
+                      <span class="text-xs text-[#68826b]">${item.date || "N/A"}</span>
+                    </div>
+                `;
                 container.appendChild(row);
             });
         }

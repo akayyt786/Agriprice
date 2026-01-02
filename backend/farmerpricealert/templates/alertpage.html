@@ -262,14 +262,16 @@
 
             if (!alerts.length) {
                 tbody.innerHTML = `
-            <tr>
-                <td class="px-4 py-2 text-sm text-[#618961]">
-                    No active alerts yet.
-                </td>
-            </tr>
-        `;
+<tr>
+    <td class="px-4 py-2 text-sm text-[#618961]">
+        ₹${a.current_price || "N/A"}
+    </td>
+
+</tr>
+`;
                 return;
             }
+
 
             alerts.forEach(a => {
                 tbody.innerHTML += `
@@ -280,7 +282,10 @@
                     ₹${a.target_min} - ₹${a.target_max}
                 </td>
 
-                <td class="px-4 py-2 text-sm text-[#618961]">—</td>
+                <td class="px-4 py-2 text-sm text-[#618961]">
+                    ₹${a.current_price || "N/A"}
+                </td>
+
 
                 <td class="px-4 py-2">
                     <button class="rounded-xl bg-[#f0f4f0] px-4 py-1 text-sm">

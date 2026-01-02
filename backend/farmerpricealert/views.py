@@ -1,6 +1,8 @@
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import SessionAuthentication
 from django.contrib.auth import authenticate
+from datetime import datetime
+from django.db import IntegrityError, transaction
 from django.contrib.auth.decorators import login_required
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -14,15 +16,25 @@ from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.shortcuts import render
-from .models import SiteContent
-from .models import DashboardImage,UserProfile
+from .models import (
+            SiteContent,
+            DashboardImage,
+            UserProfile,
+            AlertSubscription,
+            AlertHistory,
+            MarketPrice,
+            Crop,
+            Market,
+            AlertSubscription,
+            AlertHistory,
+            Crop,
+            Market,
+   )
 import random
 import requests
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from .authenticate import CookieJWTAuthentication
-from .models import AlertSubscription, AlertHistory, MarketPrice
-from .models import Crop, Market
 
 BASE_URL = "https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070"
 API_KEY = "579b464db66ec23bdd00000162112b7dd11f40117613f282ddc07b6e"
@@ -44,8 +56,21 @@ def login_page(request):
 
 def profile_page(request):
     return render(request, "profile.html")
+
+
+def logout_user(request):
+    request.session.flush()
+    return redirect("login_root")
+
+
+def round_price(value):
+    if value is None:
+        return None
+    return round(float(value) / 100) * 100
+
 def alerts_page(request):
     return render(request, "alertpage.html")
+
 
 
 # Get government market prices
@@ -81,18 +106,75 @@ def gov_market_prices(request):
 
     formatted = []
 
+    def get_field(data_dict, keys):
+        for k in keys:
+            val = data_dict.get(k)
+            if val is not None and val != "":
+                return str(val)
+        return "N/A"
+
     for d in data:
+        # 1. Robust Local Filtering (Case-Insensitive)
+        # We check this FIRST to avoid unnecessary DB work or processing
+        curr_state = d.get("state", "").lower()
+        curr_dist = d.get("district", "").lower()
+        curr_comm = d.get("commodity", "").lower()
+
+        if state and state.lower() not in curr_state:
+            continue
+        if district and district.lower() not in curr_dist:
+            continue
+        if crop and crop.lower() not in curr_comm:
+            continue
+
+        # 2. Database Synchronization
+        raw_date = d.get("arrival_date")
+        formatted_date = None
+        if raw_date:
+            try:
+                formatted_date = datetime.strptime(raw_date, "%d/%m/%Y").date()
+            except:
+                formatted_date = None
+
+        # Normalize names to lowercase to avoid duplicates
+        crop_name_raw = d.get("commodity", "N/A").lower()
+        market_name_raw = d.get("market", "N/A").lower()
+
+        crop_obj, _ = Crop.objects.get_or_create(name=crop_name_raw)
+        market_obj, _ = Market.objects.get_or_create(name=market_name_raw)
+        
+        price_obj, _ = MarketPrice.objects.get_or_create(
+            crop=crop_obj,
+            market=market_obj,
+            arrival_date=formatted_date,
+            defaults={
+                "min_price": d.get("min_price"),
+                "max_price": d.get("max_price"),
+                "modal_price": d.get("modal_price"),
+            }
+        )
+
+        # Process Alerts
+        alerts = AlertSubscription.objects.filter(crop=crop_obj, market=market_obj, status="active")
+        for alert in alerts:
+            process_alert(alert, price_obj)
+
+        # 3. Format result for Frontend
+        comm = get_field(d, ["commodity", "Commodity"])
+        mkt = get_field(d, ["market", "Market"])
+
         formatted.append({
-            "crop": d.get("commodity"),
-            "variety": d.get("variety"),
-            "grade": d.get("grade"),
-            "market": d.get("market"),
-            "state": d.get("state"),
-            "district": d.get("district"),
-            "min_price": d.get("min_price"),
-            "max_price": d.get("max_price"),
-            "modal_price": d.get("modal_price"),
-            "date": d.get("arrival_date"),
+            "date": d.get("arrival_date", "N/A"),
+            "crop_name": comm,
+            "crop": comm,
+            "mandi_name": mkt,
+            "commodity": comm, 
+            "market": mkt,
+            "state": d.get("state", "N/A"),
+            "district": d.get("district", "N/A"),
+            "min_price": d.get("min_price", "0"),
+            "max_price": d.get("max_price", "0"),
+            "modal_price": d.get("modal_price", "0"),
         })
 
     return Response({
@@ -104,7 +186,7 @@ def gov_market_prices(request):
 @method_decorator(csrf_exempt, name='dispatch')
 class RegisterView(CreateAPIView):
     serializer_class = RegisterSerializer
-
+    @transaction.atomic
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -113,6 +195,8 @@ class RegisterView(CreateAPIView):
             {"message": "User registered successfully"},
             status=status.HTTP_201_CREATED
         )
+
+
 
 @method_decorator(csrf_exempt, name='dispatch')
 class CookieLoginView(APIView):
@@ -154,47 +238,119 @@ class CookieLoginView(APIView):
             path="/",
         )
         return response
+
+@api_view(["GET"])
+@authentication_classes([CookieJWTAuthentication, SessionAuthentication])
+@permission_classes([IsAuthenticated])
+def get_past_alerts(request):
+    user = request.user
+
+    history = AlertHistory.objects.filter(
+        subscription__user=user
+    ).order_by("-created_at")
+
+    data = []
+
+    for h in history:
+        data.append({
+            "crop": h.subscription.crop.name,
+            "market": h.subscription.market.name,
+            "target_min": str(h.subscription.target_min),
+            "target_max": str(h.subscription.target_max),
+            "triggered_at": h.created_at.strftime("%Y-%m-%d %H:%M"),
+        })
+
+    return Response(data)
+
 @api_view(["GET"])
 @authentication_classes([CookieJWTAuthentication, SessionAuthentication])
 @permission_classes([IsAuthenticated])
 def get_alerts(request):
     user = request.user
 
-    active_alerts = AlertSubscription.objects.filter(user=user)
+    # All alerts for user (active + triggered)
+    active_alerts = AlertSubscription.objects.filter(
+        user=user
+    ).order_by("-created_at")
 
     past_alerts = AlertHistory.objects.filter(
         subscription__user=user
-    ).select_related("price", "subscription")
+    ).select_related("price", "subscription").order_by("-created_at")
 
     return Response({
-        "active": [
-            {
-                "id": a.id,
-                "crop": a.crop.name,
-                "market": a.market.name,
-                "target_min": str(a.target_min),
-                "target_max": str(a.target_max),
-                "status": a.status,
-                "created_at": a.created_at
-            }
-            for a in active_alerts
-        ],
+      "active": [
+    {
+        "id": a.id,
+        "crop": a.crop.name,
+        "market": a.market.name,
+        "target_min": str(a.target_min),
+        "target_max": str(a.target_max),
+        "status": a.status,
+        "created_at": a.created_at.strftime("%Y-%m-%d %H:%M"),
+        "current_price": (
+            str(
+                MarketPrice.objects.filter(
+                    crop=a.crop,
+                    market=a.market
+                ).order_by("-arrival_date").first().modal_price
+            )
+            if MarketPrice.objects.filter(
+                crop=a.crop,
+                market=a.market
+            ).exists()
+            else None
+        )
+    }
+    for a in active_alerts
+],
         "history": [
             {
                 "id": h.id,
                 "crop": h.subscription.crop.name,
                 "market": h.subscription.market.name,
                 "price_reached": str(h.price.modal_price),
-                "status": h.subscription.status,
-                "date": h.created_at
+                "status": "triggered",
+                "date": h.created_at.strftime("%Y-%m-%d %H:%M")
             }
             for h in past_alerts
         ]
     })
+
+
+def process_alert(alert, price_obj):
+    user_min = float(alert.target_min)
+    user_max = float(alert.target_max)
+
+    prices = [
+        round_price(price_obj.min_price),
+        round_price(price_obj.modal_price),
+        round_price(price_obj.max_price)
+    ]
+
+    for p in prices:
+        if p is None:
+            continue
+
+        if user_min <= p <= user_max:
+            alert.status = "triggered"
+            alert.save()
+
+            AlertHistory.objects.create(
+                subscription=alert,
+                price=price_obj
+            )
+
+            return True
+
+    return False
+
+
+
 @csrf_exempt
 @api_view(["POST"])
 @authentication_classes([CookieJWTAuthentication, SessionAuthentication])
 @permission_classes([IsAuthenticated])
+@transaction.atomic
 def create_alert(request):
     user = request.user
 
@@ -207,13 +363,18 @@ def create_alert(request):
     if not crop_name or not market_name or not min_price or not max_price:
         return Response({"error": "All fields are required"}, status=400)
 
+    # Normalize to lowercase to prevent duplicates (e.g., 'Wheat' vs 'wheat')
+    crop_name = crop_name.strip().lower()
+    market_name = market_name.strip().lower()
+
     # 1. Find the Crop (or create it if it doesn't exist)
-    crop_obj, _ = Crop.objects.get_or_create(name__iexact=crop_name, defaults={'name': crop_name})
+    # Using name=crop_name now since we normalized it
+    crop_obj, _ = Crop.objects.get_or_create(name=crop_name)
     
     # 2. Find the Market (or create it if it doesn't exist)
     market_obj, _ = Market.objects.get_or_create(
-        name__iexact=market_name, 
-        defaults={'name': market_name, 'state': 'India', 'district': market_name}
+        name=market_name, 
+        defaults={'state': 'India', 'district': market_name}
     )
 
     # 3. Create the Alert using the OBJECTS we found above
@@ -226,6 +387,8 @@ def create_alert(request):
     )
 
     return Response({"message": "Alert created successfully", "id": alert.id})
+
+
 @api_view(["GET"])
 @authentication_classes([CookieJWTAuthentication, SessionAuthentication])
 @permission_classes([IsAuthenticated])
@@ -243,9 +406,12 @@ def get_profile(request):
         "profile_image": profile.profile_image.url if profile.profile_image else None
     })
 
+
+
 @api_view(["POST", "PUT"])
 @authentication_classes([CookieJWTAuthentication, SessionAuthentication])
 @permission_classes([IsAuthenticated])
+@transaction.atomic
 def update_profile(request):
     user = request.user
     profile, created = UserProfile.objects.get_or_create(user=user)
@@ -269,6 +435,8 @@ def update_profile(request):
     profile.save()
     return Response({"message": "Profile updated"})
 
+
+
 @api_view(["POST"])
 @authentication_classes([CookieJWTAuthentication, SessionAuthentication])
 @permission_classes([IsAuthenticated])
@@ -283,6 +451,8 @@ def change_password(request):
     user.set_password(new)
     user.save()
     return Response({"message": "Password updated"})
+
+
 
 @api_view(["POST", "DELETE"])
 @authentication_classes([CookieJWTAuthentication, SessionAuthentication])
