@@ -67,7 +67,76 @@ def round_price(value):
 def alerts_page(request):
     return render(request, "alertpage.html")
 
+@method_decorator(csrf_exempt, name='dispatch')
+class RegisterView(CreateAPIView):
+    serializer_class = RegisterSerializer
+    @transaction.atomic
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(
+            {"message": "User registered successfully"},
+            status=status.HTTP_201_CREATED
+        )
 
+
+@api_view(["GET"])
+@authentication_classes([CookieJWTAuthentication, SessionAuthentication])
+@permission_classes([IsAuthenticated])
+def list_markets(request):
+    markets = Market.objects.all().order_by("name")
+
+    return Response([
+        {
+            "id": m.id,
+            "name": m.name.title(),
+            "district": m.district,
+            "state": m.state
+        }
+        for m in markets
+    ])
+
+@method_decorator(csrf_exempt, name='dispatch')
+class CookieLoginView(APIView):
+    def post(self, request):
+
+        # 1. Get username and password from the request
+        username = request.data.get("username")
+        password = request.data.get("password")
+
+        # 2. Check if the user exists and password is correct
+        user = authenticate(username=username, password=password)
+
+        if user is None:
+            return JsonResponse({"detail": "Invalid username or password"}, status=401)
+
+        # 3. Create JWT tokens
+        refresh = RefreshToken.for_user(user)
+        access = refresh.access_token
+
+        # 4. Create a response
+        response = JsonResponse({"message": "Login successful"})
+
+        # 5. Save tokens as cookies
+        response.set_cookie(
+            "access",
+            value=str(access),
+            httponly=True,   # JavaScript cannot read it
+            secure=False,    # change to True when using HTTPS
+            samesite="Lax",
+            path="/",
+        )
+
+        response.set_cookie(
+            "refresh",
+            value=str(refresh),
+            httponly=True,
+            secure=False,
+            samesite="Lax",
+            path="/",
+        )
+        return response
 
 # Get government market prices
 @api_view(["GET"])
@@ -96,7 +165,7 @@ def gov_market_prices(request):
         params["filters[market]"] = mandi.title()
 
     try:
-        res = requests.get(BASE_URL, params=params, timeout=10)
+        res = requests.get(BASE_URL, params=params, timeout=59)
         api_failed = (res.status_code != 200)
     except Exception as e:
         print(f"--- ERROR: Gov API Connection Failed: {str(e)}")
@@ -255,61 +324,9 @@ def gov_market_prices(request):
     })
 
 
-@method_decorator(csrf_exempt, name='dispatch')
-class RegisterView(CreateAPIView):
-    serializer_class = RegisterSerializer
-    @transaction.atomic
-    def post(self, request):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(
-            {"message": "User registered successfully"},
-            status=status.HTTP_201_CREATED
-        )
 
 
 
-@method_decorator(csrf_exempt, name='dispatch')
-class CookieLoginView(APIView):
-    def post(self, request):
-
-        # 1. Get username and password from the request
-        username = request.data.get("username")
-        password = request.data.get("password")
-
-        # 2. Check if the user exists and password is correct
-        user = authenticate(username=username, password=password)
-
-        if user is None:
-            return JsonResponse({"detail": "Invalid username or password"}, status=401)
-
-        # 3. Create JWT tokens
-        refresh = RefreshToken.for_user(user)
-        access = refresh.access_token
-
-        # 4. Create a response
-        response = JsonResponse({"message": "Login successful"})
-
-        # 5. Save tokens as cookies
-        response.set_cookie(
-            "access",
-            value=str(access),
-            httponly=True,   # JavaScript cannot read it
-            secure=False,    # change to True when using HTTPS
-            samesite="Lax",
-            path="/",
-        )
-
-        response.set_cookie(
-            "refresh",
-            value=str(refresh),
-            httponly=True,
-            secure=False,
-            samesite="Lax",
-            path="/",
-        )
-        return response
 
 @api_view(["GET"])
 @authentication_classes([CookieJWTAuthentication, SessionAuthentication])
@@ -416,6 +433,47 @@ def process_alert(alert, price_obj, message):
             return True
 
     return False
+#for deleting alert
+@api_view(["DELETE"])
+@authentication_classes([CookieJWTAuthentication, SessionAuthentication])
+@permission_classes([IsAuthenticated])
+def delete_alert(request, alert_id):
+    user = request.user
+
+    alert = AlertSubscription.objects.filter(id=alert_id, user=user).first()
+
+    if not alert:
+        return Response({"error": "Alert not found"}, status=404)
+
+    alert.delete()
+
+    return Response({"message": "Alert deleted"})
+
+
+#for updating alert
+@api_view(["PUT"])
+@authentication_classes([CookieJWTAuthentication, SessionAuthentication])
+@permission_classes([IsAuthenticated])
+def update_alert(request, alert_id):
+    user = request.user
+
+    alert = AlertSubscription.objects.filter(id=alert_id, user=user).first()
+
+    if not alert:
+        return Response({"error": "Alert not found"}, status=404)
+
+    min_price = request.data.get("min_price")
+    max_price = request.data.get("max_price")
+
+    if not min_price or not max_price:
+        return Response({"error": "Prices are required"}, status=400)
+
+    alert.target_min = min_price
+    alert.target_max = max_price
+    alert.save()
+
+    return Response({"message": "Alert updated"})
+
 
 
 
@@ -428,29 +486,19 @@ def create_alert(request):
     user = request.user
 
     crop_name = request.data.get("crop")
-    market_name = request.data.get("market")
+    market_id = request.data.get("market_id")
     min_price = request.data.get("min_price")
     max_price = request.data.get("max_price")
 
-    if not crop_name or not market_name or not min_price or not max_price:
+    if not crop_name or not market_id or not min_price or not max_price:
         return Response({"error": "All fields are required"}, status=400)
-
-    crop_name = crop_name.strip().lower()
-    market_name = market_name.strip().lower()
 
     crop_obj, _ = Crop.objects.get_or_create(name=crop_name)
 
-    # 🔥 MATCH BY DISTRICT FIRST
-    market_obj = Market.objects.filter(
-        district__icontains=market_name
-    ).first()
+    market_obj = Market.objects.filter(id=market_id).first()
 
     if not market_obj:
-        market_obj = Market.objects.create(
-            name=market_name,
-            state="India",
-            district=market_name
-        )
+        return Response({"error": "Invalid market selected"}, status=400)
 
     alert = AlertSubscription.objects.create(
         user=user,

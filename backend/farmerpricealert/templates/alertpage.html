@@ -217,6 +217,53 @@
         </div>
     </div>
     <script>
+        let markets = [];
+        let selectedMarketId = null;
+
+        function loadMarkets() {
+            fetch("/api/markets/", { credentials: "include" })
+                .then(res => res.json())
+                .then(list => {
+                    markets = list;
+                });
+        }
+
+        document.addEventListener("DOMContentLoaded", loadMarkets);
+        document.addEventListener("DOMContentLoaded", () => {
+
+            const searchInput = document.getElementById("alert-market-search");
+            const listBox = document.getElementById("market-list");
+
+            searchInput.addEventListener("input", () => {
+                const text = searchInput.value.toLowerCase();
+                listBox.innerHTML = "";
+
+                if (!text) {
+                    listBox.classList.add("hidden");
+                    return;
+                }
+
+                const filtered = markets.filter(m =>
+                    m.name.toLowerCase().includes(text)
+                );
+
+                filtered.forEach(m => {
+                    const li = document.createElement("li");
+                    li.className = "px-3 py-2 cursor-pointer hover:bg-gray-100";
+                    li.textContent = `${m.name} (${m.state})`;
+
+                    li.onclick = () => {
+                        searchInput.value = m.name;
+                        selectedMarketId = m.id;
+                        listBox.classList.add("hidden");
+                    };
+
+                    listBox.appendChild(li);
+                });
+
+                listBox.classList.remove("hidden");
+            });
+        });
         function getCookie(name) {
             let cookieValue = null;
             if (document.cookie && document.cookie !== "") {
@@ -256,18 +303,73 @@
         }
 
 
+        function deleteAlert(id) {
+            if (!confirm("Delete this alert?")) return;
+
+            fetch(`/api/alerts/${id}/delete/`, {
+                method: "DELETE",
+                credentials: "include",
+                headers: {
+                    "X-CSRFToken": getCookie("csrftoken")
+                }
+            })
+                .then(res => res.json())
+                .then(() => {
+                    alert("Alert deleted");
+                    location.reload();
+                });
+        }
+
+        let editId = null;
+
+        function openEditModal(id, min, max) {
+            editId = id;
+            document.getElementById("edit-min").value = min;
+            document.getElementById("edit-max").value = max;
+
+            document.getElementById("edit-modal").classList.remove("hidden");
+        }
+
+        function closeEdit() {
+            editId = null;
+            document.getElementById("edit-modal").classList.add("hidden");
+        }
+
+        function saveAlertEdit() {
+            const min = document.getElementById("edit-min").value;
+            const max = document.getElementById("edit-max").value;
+
+            fetch(`/api/alerts/${editId}/update/`, {
+                method: "PUT",
+                credentials: "include",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": getCookie("csrftoken")
+                },
+                body: JSON.stringify({
+                    min_price: min,
+                    max_price: max
+                })
+            })
+                .then(res => res.json())
+                .then(() => {
+                    closeEdit();
+                    location.reload();
+                });
+        }
+
         function renderActiveAlerts(alerts) {
             const tbody = document.getElementById("active-alerts-body");
             tbody.innerHTML = "";
 
             if (!alerts || alerts.length === 0) {
                 tbody.innerHTML = `
-                    <tr>
-                        <td colspan="6" class="px-4 py-8 text-center text-[#618961]">
-                            No active alerts yet.
-                        </td>
-                    </tr>
-                `;
+                <tr>
+                    <td colspan="6" class="px-4 py-8 text-center text-[#618961]">
+                        No active alerts yet.
+                    </td>
+                </tr>
+            `;
                 return;
             }
 
@@ -293,8 +395,15 @@
                 </td>
 
                 <td class="px-4 py-2 text-sm text-[#618961] font-bold">
-                    Edit | Delete
-                </td>
+    <button onclick="openEditModal(${a.id}, ${a.target_min}, ${a.target_max})" class="text-blue-600">
+        Edit
+    </button>
+    |
+    <button onclick="deleteAlert(${a.id})" class="text-red-600">
+        Delete
+    </button>
+</td>
+
             </tr>
         `;
             });
@@ -339,7 +448,8 @@
         function submitAlert() {
 
             const crop = document.getElementById("alert-crop").value;
-            const market = document.getElementById("alert-market").value;
+            const market = selectedMarketId;
+
             const min = document.getElementById("alert-min").value;
             const max = document.getElementById("alert-max").value;
 
@@ -357,10 +467,11 @@
                 credentials: "include",
                 body: JSON.stringify({
                     crop: crop,
-                    market: market,
+                    market_id: market,
                     min_price: min,
                     max_price: max
                 })
+
             })
                 .then(res => res.json())
                 .then(d => {
@@ -378,7 +489,10 @@
 
             <input id="alert-crop" placeholder="Crop name" class="w-full border p-2 rounded-lg" />
 
-            <input id="alert-market" placeholder="District name" class="w-full border p-2 rounded-lg" />
+            <input id="alert-market-search" placeholder="Search mandi name" class="w-full border p-2 rounded-lg" />
+
+            <ul id="market-list" class="border rounded-lg mt-2 hidden max-h-40 overflow-y-auto bg-white">
+            </ul>
 
             <input id="alert-min" type="number" placeholder="Minimum price" class="w-full border p-2 rounded-lg" />
 
@@ -395,6 +509,23 @@
                 </button>
             </div>
 
+        </div>
+    </div>
+    <div id="edit-modal" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center">
+        <div class="bg-white p-4 rounded w-[350px]">
+            <h3 class="text-lg font-bold mb-2">Edit Alert</h3>
+
+            <input id="edit-min" class="border p-2 w-full mb-2" placeholder="Min price">
+            <input id="edit-max" class="border p-2 w-full mb-3" placeholder="Max price">
+
+            <div class="flex justify-end gap-2">
+                <button onclick="closeEdit()" class="px-3 py-1 bg-gray-300 rounded">
+                    Cancel
+                </button>
+                <button onclick="saveAlertEdit()" class="px-3 py-1 bg-green-600 text-white rounded">
+                    Save
+                </button>
+            </div>
         </div>
     </div>
 

@@ -9,11 +9,13 @@ from .views import (
     gov_market_prices,
     market_prices_page,
     profile_page,
-    alerts_page,get_profile,get_alerts,create_alert,get_past_alerts
+    alerts_page,get_profile,get_alerts,create_alert,get_past_alerts,list_markets,delete_alert,update_alert
 )
 from django.views.decorators.csrf import csrf_exempt
 from .views import update_profile, change_password, delete_account
-
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.authentication import SessionAuthentication
+from .authenticate import CookieJWTAuthentication
 
 urlpatterns = [
     path("", login_page, name="login_root"),
@@ -21,7 +23,7 @@ urlpatterns = [
     path("login/", login_page, name="login_page"),
     path("profile/", profile_page, name="profile_page"),
     path("alerts/", alerts_page, name="alerts_page"),
-    path("api/alerts/past/", get_past_alerts, name="past-alerts"),
+   
 
 
 
@@ -38,7 +40,10 @@ urlpatterns = [
     path("api/profile/delete/", delete_account, name="delete_account"),
     path("api/alerts/", get_alerts, name="get_alerts"),
     path("api/alerts/create/", create_alert, name="create_alert"),
-
+    path("api/markets/", list_markets, name="list_markets"),
+    path("api/alerts/past/", get_past_alerts, name="past-alerts"),
+    path("api/alerts/<int:alert_id>/delete/", delete_alert, name="delete_alert"),
+    path("api/alerts/<int:alert_id>/update/", update_alert, name="update_alert"),
 
     # ⭐ THIS ONE RETURNS JSON (DATA)
     path("api/gov/market-prices/", gov_market_prices, name="gov_market_prices"),
