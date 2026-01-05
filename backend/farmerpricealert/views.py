@@ -1,9 +1,10 @@
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import SessionAuthentication
 from django.contrib.auth import authenticate
+from django.shortcuts import redirect, render
+from django.views.decorators.cache import never_cache
 from datetime import datetime
 from django.db import IntegrityError, transaction, models
-from django.contrib.auth.decorators import login_required
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -12,10 +13,8 @@ from rest_framework import status
 from rest_framework.generics import CreateAPIView
 from .serializers import RegisterSerializer
 from .models import User
-from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-from django.shortcuts import render
 from .models import (
     SiteContent,
     DashboardImage,
@@ -28,35 +27,59 @@ from .models import (
 )
 import random
 import requests
+from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from .authenticate import CookieJWTAuthentication
 
 BASE_URL = "https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070"
-API_KEY = "579b464db66ec23bdd0000010d34124ece90452a446148df3f3975f7"
+BASE_URL = "https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070"
+API_KEY = settings.GOV_API_KEY
 
 def registration_page(request):
+    # If already authenticated, redirect to dashboard
+    if _is_authenticated(request):
+        return redirect('dashboard')
     content = SiteContent.objects.filter(page_name="registration").first()
     return render(request, "registration.html", {"content": content})
 
+def _is_authenticated(request):
+    """Check if user is authenticated via JWT or session."""
+    return request.user and request.user.is_authenticated
+
+def _require_login(view_func):
+    """Decorator to require authentication for views using JWT cookies."""
+    def wrapper(request, *args, **kwargs):
+        if not _is_authenticated(request):
+            return redirect('login_page')
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+@never_cache
+@_require_login
 def market_prices_page(request):
     return render(request, "marketprices.html")
 
+@never_cache
+@_require_login
 def dashboard_page(request):
     images = {img.key: img for img in DashboardImage.objects.all()}
     return render(request, "dashboard.html", {"dashboard_images": images})
 
 def login_page(request):
+    # If already authenticated, redirect to dashboard
+    if _is_authenticated(request):
+        return redirect('dashboard')
     return render(request, "login.html")
 
 
+@never_cache
+@_require_login
 def profile_page(request):
     return render(request, "profile.html")
 
 
-def logout_user(request):
-    request.session.flush()
-    return redirect("login_root")
+
 
 
 def round_price(value):
@@ -64,6 +87,8 @@ def round_price(value):
         return None
     return round(float(value) / 100) * 100
 
+@never_cache
+@_require_login
 def alerts_page(request):
     return render(request, "alertpage.html")
 
@@ -80,7 +105,7 @@ class RegisterView(CreateAPIView):
             status=status.HTTP_201_CREATED
         )
 
-
+@never_cache
 @api_view(["GET"])
 @authentication_classes([CookieJWTAuthentication, SessionAuthentication])
 @permission_classes([IsAuthenticated])
@@ -139,6 +164,7 @@ class CookieLoginView(APIView):
         return response
 
 # Get government market prices
+@never_cache
 @api_view(["GET"])
 @authentication_classes([CookieJWTAuthentication, SessionAuthentication])
 @permission_classes([IsAuthenticated])
@@ -327,7 +353,7 @@ def gov_market_prices(request):
 
 
 
-
+@never_cache
 @api_view(["GET"])
 @authentication_classes([CookieJWTAuthentication, SessionAuthentication])
 @permission_classes([IsAuthenticated])
@@ -351,6 +377,7 @@ def get_past_alerts(request):
 
     return Response(data)
 
+@never_cache
 @api_view(["GET"])
 @authentication_classes([CookieJWTAuthentication, SessionAuthentication])
 @permission_classes([IsAuthenticated])
@@ -452,6 +479,7 @@ def process_alert(alert, price_obj, message):
 
 
 #for deleting alert
+@never_cache
 @api_view(["DELETE"])
 @authentication_classes([CookieJWTAuthentication, SessionAuthentication])
 @permission_classes([IsAuthenticated])
@@ -494,7 +522,7 @@ def update_alert(request, alert_id):
 
 
 
-
+@never_cache
 @csrf_exempt
 @api_view(["POST"])
 @authentication_classes([CookieJWTAuthentication, SessionAuthentication])
@@ -529,7 +557,7 @@ def create_alert(request):
     return Response({"message": "Alert created successfully", "id": alert.id})
 
 
-
+@never_cache
 @api_view(["GET"])
 @authentication_classes([CookieJWTAuthentication, SessionAuthentication])
 @permission_classes([IsAuthenticated])
@@ -549,6 +577,7 @@ def get_profile(request):
 
 
 
+@never_cache
 @api_view(["POST", "PUT"])
 @authentication_classes([CookieJWTAuthentication, SessionAuthentication])
 @permission_classes([IsAuthenticated])
@@ -578,6 +607,7 @@ def update_profile(request):
 
 
 
+@never_cache
 @api_view(["POST"])
 @authentication_classes([CookieJWTAuthentication, SessionAuthentication])
 @permission_classes([IsAuthenticated])
@@ -595,6 +625,7 @@ def change_password(request):
 
 
 
+@never_cache
 @api_view(["POST", "DELETE"])
 @authentication_classes([CookieJWTAuthentication, SessionAuthentication])
 @permission_classes([IsAuthenticated])
@@ -605,12 +636,20 @@ def delete_account(request):
 
 
 def logout_user(request):
-    response = JsonResponse({"message": "Logged out successfully"})
-    response.delete_cookie("access", path="/")
-    response.delete_cookie("refresh", path="/")
+    """Logout user by clearing JWT cookies."""
+    response = JsonResponse({
+        "message": "Logged out successfully",
+        "redirect": "/login/"
+    })
+    
+    # Clear JWT tokens from cookies
+    response.set_cookie("access", "", max_age=0, expires="Thu, 01 Jan 1970 00:00:00 GMT", path="/", samesite="Lax", httponly=True, secure=False)
+    response.set_cookie("refresh", "", max_age=0, expires="Thu, 01 Jan 1970 00:00:00 GMT", path="/", samesite="Lax", httponly=True, secure=False)
+    
     return response
 
 
+@never_cache
 @api_view(["GET"])
 @authentication_classes([CookieJWTAuthentication, SessionAuthentication])
 @permission_classes([IsAuthenticated])
