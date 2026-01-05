@@ -33,7 +33,7 @@ from rest_framework.decorators import api_view, permission_classes, authenticati
 from .authenticate import CookieJWTAuthentication
 
 BASE_URL = "https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070"
-API_KEY = "579b464db66ec23bdd00000162112b7dd11f40117613f282ddc07b6e"
+API_KEY = "579b464db66ec23bdd0000010d34124ece90452a446148df3f3975f7"
 
 def registration_page(request):
     content = SiteContent.objects.filter(page_name="registration").first()
@@ -357,47 +357,63 @@ def get_past_alerts(request):
 def get_alerts(request):
     user = request.user
 
-    # All alerts for user (active + triggered)
-    active_alerts = AlertSubscription.objects.filter(
+    # 1. Fetch all subscriptions (we'll filter active ones later after processing)
+    all_alerts = AlertSubscription.objects.filter(
         user=user
     ).order_by("-created_at")
 
+    active_data = []
+
+    # 2. Process ALL alerts to see if any need triggering NOW
+    for a in all_alerts:
+        if a.status != 'active':
+            continue
+
+        # Try to find the latest price for this specific market and crop
+        latest_price_obj = MarketPrice.objects.filter(
+            models.Q(market=a.market) | models.Q(market__name__iexact=a.market.name),
+            crop__name__iexact=a.crop.name
+        ).order_by("-arrival_date").first()
+        
+        current_price_val = None
+        if latest_price_obj:
+            p_min = round_price(latest_price_obj.min_price)
+            p_max = round_price(latest_price_obj.max_price)
+            current_price_val = f"{p_min} - {p_max}"
+
+            # CHECK TRIGGER CONDITION
+            message = f"Market Alert: {a.crop.name.title()} is available in {a.market.name.title()} mandi at price range {p_min}-{p_max}."
+            is_triggered = process_alert(a, latest_price_obj, message)
+            
+            if is_triggered:
+                # If triggered, it's no longer active, so don't add to active_data
+                continue
+
+        active_data.append({
+            "id": a.id,
+            "crop": a.crop.name,
+            "market": a.market.name,
+            "target_min": str(a.target_min),
+            "target_max": str(a.target_max),
+            "status": a.status,
+            "created_at": a.created_at.strftime("%Y-%m-%d %H:%M"),
+            "current_price": current_price_val
+        })
+
+    # 3. Fetch history of triggered alerts (now including the ones we just triggered)
     past_alerts = AlertHistory.objects.filter(
         subscription__user=user
     ).select_related("price", "subscription").order_by("-created_at")
 
+    # 4. Return the response
     return Response({
-      "active": [
-    {
-        "id": a.id,
-        "crop": a.crop.name,
-        "market": a.market.name,
-        "target_min": str(a.target_min),
-        "target_max": str(a.target_max),
-        "status": a.status,
-        "created_at": a.created_at.strftime("%Y-%m-%d %H:%M"),
-        "current_price": (
-            str(
-                MarketPrice.objects.filter(
-                    models.Q(market=a.market) | models.Q(market__district__iexact=a.market.name),
-                    crop=a.crop
-                ).order_by("-arrival_date").first().modal_price
-            )
-            if MarketPrice.objects.filter(
-                models.Q(market=a.market) | models.Q(market__district__iexact=a.market.name),
-                crop=a.crop
-            ).exists()
-            else None
-        )
-    }
-    for a in active_alerts
-],
+        "active": active_data,
         "history": [
             {
                 "id": h.id,
                 "crop": h.subscription.crop.name,
                 "market": h.subscription.market.name,
-                "price_reached": str(h.price.modal_price),
+                "price_reached": str(h.price.modal_price if h.price else "N/A"),
                 "status": "triggered",
                 "date": h.created_at.strftime("%Y-%m-%d %H:%M")
             }
@@ -433,6 +449,8 @@ def process_alert(alert, price_obj, message):
             return True
 
     return False
+
+
 #for deleting alert
 @api_view(["DELETE"])
 @authentication_classes([CookieJWTAuthentication, SessionAuthentication])
