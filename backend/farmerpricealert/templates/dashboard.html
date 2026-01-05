@@ -24,7 +24,7 @@
                                 <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10"
                                     style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBAvaRTIkfRKcMrlus6R-TmQqt3eug4vs81fi0gNYVu7aeTTf36ydfPf8ncNyuN3n8iIj3cJy-P9ZFZsSirewzHuNrOUg60wg4orxuj9Qbsa7kUn8lCEl2u-Q60El5owlKh3eKW5eTxvjIubgIe0KEhIxK46n-jeOl0VIzcr0ObY_wBr3W1UOkl0kBfIojNkEESqpmm8ATpV1exjkBpsF8RzZHTGva5JgjYbvGnBcywwx1lJnjDTLS5xKQrDZwHYRnHLIIm0ll8FqI");'>
                                 </div>
-                                <h1 class="text-[#101911] text-base font-medium leading-normal">AgriConnect</h1>
+                                <h1 class="text-[#101911] text-base font-medium leading-normal">AgriPrice</h1>
                             </div>
                             <div class="flex flex-col gap-2">
                                 <div class="flex items-center gap-3 px-3 py-2 rounded-xl bg-[#e9f1ea]">
@@ -61,7 +61,7 @@
                                             </path>
                                         </svg>
                                     </div>
-                                    <a href="myalerts.html">
+                                    <a href="/alerts/">
                                         <p class="text-[#101911] text-sm font-medium leading-normal">My Alerts</p>
                                     </a>
                                 </div>
@@ -109,6 +109,124 @@
                 </div>
 
                 <script>
+                    document.addEventListener("DOMContentLoaded", () => {
+                        fetchMarkets();
+                        fetchLivePrices();
+                    });
+
+
+                    // 3. Fetch Live Prices from LOCAL DB
+                    async function fetchLivePrices() {
+                        try {
+                            // CHANGED: Perform fetch to our local API instead of the government one
+                            const res = await fetch("/api/market-prices/recent/");
+                            const data = await res.json();
+
+                            // --- UPDATE TABLE ---
+                            const tbody = document.getElementById("live-prices-body");
+                            tbody.innerHTML = ""; // Clear existing table rows
+
+                            if (data.table_data && data.table_data.length > 0) {
+                                data.table_data.forEach(item => {
+                                    const row = `
+                                        <tr class="border-t border-t-[#d3e3d5]">
+                                            <td class="h-[72px] px-4 py-2 text-[#101911] text-sm font-normal">${item.crop_name}</td>
+                                            <td class="h-[72px] px-4 py-2 text-[#5a8c5e] text-sm font-normal">${item.state}</td>
+                                            <td class="h-[72px] px-4 py-2 text-[#5a8c5e] text-sm font-normal">${item.district}</td>
+                                            <td class="h-[72px] px-4 py-2 text-[#5a8c5e] text-sm font-normal">₹${item.min_price}</td>
+                                            <td class="h-[72px] px-4 py-2 text-[#5a8c5e] text-sm font-normal">₹${item.max_price}</td>
+                                            <td class="h-[72px] px-4 py-2 text-[#5a8c5e] text-sm font-normal">${item.date}</td>
+                                        </tr>
+                                    `;
+                                    tbody.innerHTML += row;
+                                });
+                            } else {
+                                tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center">No recent data found</td></tr>`;
+                            }
+
+                            // --- UPDATE CARDS ---
+                            // Helper function to safely update a card by ID
+                            const updateCard = (elementId, cropName, itemData) => {
+                                const el = document.getElementById(elementId);
+                                if (el) {
+                                    if (itemData) {
+                                        el.innerText = `${itemData.name} - ${itemData.price}`;
+                                    } else {
+                                        el.innerText = `${cropName} - No Data Available`;
+                                    }
+                                }
+                            };
+
+                            if (data.card_data) {
+                                updateCard("card_price_wheat", "Wheat", data.card_data.wheat);
+                                updateCard("card_price_rice", "Rice", data.card_data.rice);
+                                updateCard("card_price_cotton", "Cotton", data.card_data.cotton);
+                                updateCard("card_price_soybean", "Soybean", data.card_data.soybean);
+                                updateCard("card_price_sugarcane", "Sugarcane", data.card_data.sugarcane);
+                            }
+
+                        } catch (error) {
+                            console.error("Error fetching prices:", error);
+                        }
+                    }
+
+                    // 4. Create Alert Function (Linked to Button)
+                    async function createAlert() {
+                        const crop = document.getElementById("alert_crop").value;
+                        const market_id = document.getElementById("alert_market_id").value;
+                        const min_price = document.getElementById("alert_min_price").value;
+                        const max_price = document.getElementById("alert_max_price").value;
+
+                        if (!crop || !market_id || !min_price || !max_price) {
+                            alert("Please fill in all fields.");
+                            return;
+                        }
+
+                        try {
+                            const res = await fetch("/api/alerts/create/", {
+                                method: "POST",
+                                headers: {
+                                    "Content-Type": "application/json",
+                                    // 'X-CSRFToken': getCookie('csrftoken') // Uncomment if CSRF errors occur, but your view is @csrf_exempt
+                                },
+                                body: JSON.stringify({
+                                    crop: crop,
+                                    market_id: market_id,
+                                    min_price: min_price,
+                                    max_price: max_price
+                                })
+                            });
+
+                            const data = await res.json();
+
+                            if (res.ok) {
+                                alert("Alert created successfully!");
+                                // Optional: Clear inputs
+                                document.getElementById("alert_crop").value = "";
+                                document.getElementById("alert_min_price").value = "";
+                                document.getElementById("alert_max_price").value = "";
+                            } else {
+                                alert("Error: " + (data.error || "Something went wrong"));
+                            }
+                        } catch (error) {
+                            console.error("Error creating alert:", error);
+                            alert("Failed to connect to the server.");
+                        }
+                    }
+                    document.addEventListener("DOMContentLoaded", () => {
+                        fetch("/api/profile/me/", { credentials: "include" })
+                            .then(res => res.json())
+                            .then(data => {
+                                if (data.profile_image) {
+                                    const headerImg = document.getElementById("header-profile-img");
+                                    if (headerImg) headerImg.style.backgroundImage = `url("${data.profile_image}")`;
+
+                                    const sidebarImg = document.getElementById("sidebar-profile-img");
+                                    if (sidebarImg) sidebarImg.style.backgroundImage = `url("${data.profile_image}")`;
+                                }
+                            })
+                            .catch(err => console.error("Profile sync failed:", err));
+                    });
                     async function logout() {
                         try {
                             const res = await fetch("/api/logout/");
@@ -135,24 +253,8 @@
                                     </svg>
                                 </div>
                                 <h2 class="text-[#101911] text-lg font-bold leading-tight tracking-[-0.015em]">
-                                    AgriConnect</h2>
+                                    Agriprice</h2>
                             </div>
-                            <label class="flex flex-col min-w-40 !h-10 max-w-64">
-                                <div class="flex w-full flex-1 items-stretch rounded-xl h-full">
-                                    <div class="text-[#5a8c5e] flex border-none bg-[#e9f1ea] items-center justify-center pl-4 rounded-l-xl border-r-0"
-                                        data-icon="MagnifyingGlass" data-size="24px" data-weight="regular">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px"
-                                            fill="currentColor" viewBox="0 0 256 256">
-                                            <path
-                                                d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z">
-                                            </path>
-                                        </svg>
-                                    </div>
-                                    <input placeholder="Search"
-                                        class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#101911] focus:outline-0 focus:ring-0 border-none bg-[#e9f1ea] focus:border-none h-full placeholder:text-[#5a8c5e] px-4 rounded-l-none border-l-0 pl-2 text-base font-normal leading-normal"
-                                        value="" />
-                                </div>
-                            </label>
                         </div>
                         <div class="flex flex-1 justify-end gap-8">
                             <button
@@ -166,8 +268,9 @@
                                     </svg>
                                 </div>
                             </button>
-                            <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10"
-                                style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCoqXdUPfoYg21DYysrZysQ-cu54gA7qx9Si25mqCJgBuNLvePKGlv_TiEHWZzW8aefOK5B_34U8Zv642IsoD8YHAhfHOx-mv7r1jxvQENlO6DdxjXJwAECRoRJe92CtkpaLuNzevrH5bOVdHJxg6yPDp8LUejlVzI24ey7I1rK2FDfRzUO970fsDH-HBaI4-tPuSOEc_RjMDai62tmyHLydMZH8Ivrnp8xhYEju842swPPwPeOI7Ciw7tpoBlTA7jYFGdOG99KQfE");'>
+                            <div id="sidebar-profile-img"
+                                class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10"
+                                style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBAvaRTIkfRKcMrlus6R-TmQqt3eug4vs81fi0gNYVu7aeTTf36ydfPf8ncNyuN3n8iIj3cJy-P9ZFZsSirewzHuNrOUg60wg4orxuj9Qbsa7kUn8lCEl2u-Q60El5owlKh3eKW5eTxvjIubgIe0KEhIxK46n-jeOl0VIzcr0ObY_wBr3W1UOkl0kBfIojNkEESqpmm8ATpV1exjkBpsF8RzZHTGva5JgjYbvGnBcywwx1lJnjDTLS5xKQrDZwHYRnHLIIm0ll8FqI");'>
                             </div>
                         </div>
                     </header>
@@ -194,92 +297,162 @@
                         </div>
                     </div>
                     <h2 class="text-[#101911] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
-                        Live Market Prices</h2>
+                        Live Market Prices
+                    </h2>
                     <div
-                        class="flex overflow-y-auto [-ms-scrollbar-style:none] [scrollbar-width:none] [&amp;::-webkit-scrollbar]:hidden">
+                        class="flex overflow-y-auto [-ms-scrollbar-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                         <div class="flex items-stretch p-4 gap-3">
                             <div class="flex h-full flex-1 flex-col gap-4 rounded-lg min-w-40">
                                 <div class="w-full bg-center bg-no-repeat aspect-square bg-cover rounded-xl flex flex-col"
                                     style='background-image: url("{{ dashboard_images.wheat.image.url }}");'>
                                 </div>
-                                <p class="text-[#101911] text-base font-medium leading-normal">Wheat - ₹2,150/quintal
+                                <p id="card_price_wheat" class="text-[#101911] text-base font-medium leading-normal">
+                                    Wheat - Loading...
                                 </p>
                             </div>
+
                             <div class="flex h-full flex-1 flex-col gap-4 rounded-lg min-w-40">
                                 <div class="w-full bg-center bg-no-repeat aspect-square bg-cover rounded-xl flex flex-col"
                                     style='background-image: url("{{ dashboard_images.rice.image.url }}");'>
                                 </div>
-                                <p class="text-[#101911] text-base font-medium leading-normal">Rice - ₹1,800/quintal</p>
+                                <p id="card_price_rice" class="text-[#101911] text-base font-medium leading-normal">
+                                    Rice - Loading...
+                                </p>
                             </div>
+
                             <div class="flex h-full flex-1 flex-col gap-4 rounded-lg min-w-40">
                                 <div class="w-full bg-center bg-no-repeat aspect-square bg-cover rounded-xl flex flex-col"
                                     style='background-image: url("{{ dashboard_images.cotton.image.url }}");'>
                                 </div>
-                                <p class="text-[#101911] text-base font-medium leading-normal">Cotton - ₹6,500/quintal
+                                <p id="card_price_cotton" class="text-[#101911] text-base font-medium leading-normal">
+                                    Cotton - Loading...
                                 </p>
                             </div>
+
                             <div class="flex h-full flex-1 flex-col gap-4 rounded-lg min-w-40">
                                 <div class="w-full bg-center bg-no-repeat aspect-square bg-cover rounded-xl flex flex-col"
                                     style='background-image: url("{{ dashboard_images.soybean.image.url }}");'>
                                 </div>
-                                <p class="text-[#101911] text-base font-medium leading-normal">Soybean - ₹4,500/quintal
+                                <p id="card_price_soybean" class="text-[#101911] text-base font-medium leading-normal">
+                                    Soybean - Loading...
                                 </p>
                             </div>
+
                             <div class="flex h-full flex-1 flex-col gap-4 rounded-lg min-w-40">
                                 <div class="w-full bg-center bg-no-repeat aspect-square bg-cover rounded-xl flex flex-col"
                                     style='background-image: url("{{ dashboard_images.sugarcane.image.url }}");'>
                                 </div>
-                                <p class="text-[#101911] text-base font-medium leading-normal">Sugarcane - ₹350/quintal
+                                <p id="card_price_sugarcane"
+                                    class="text-[#101911] text-base font-medium leading-normal">
+                                    Sugarcane - Loading...
                                 </p>
                             </div>
                         </div>
                     </div>
                     <h2 class="text-[#101911] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
-                        Set Price Alert</h2>
-                    <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                        Set Price Alert
+                    </h2>
+
+                    <div class="flex max-w-[800px] flex-wrap items-end gap-4 px-4 py-3">
                         <label class="flex flex-col min-w-40 flex-1">
                             <p class="text-[#101911] text-base font-medium leading-normal pb-2">Commodity</p>
-                            <input placeholder="Select Commodity"
-                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#101911] focus:outline-0 focus:ring-0 border border-[#d3e3d5] bg-[#f9fbf9] focus:border-[#d3e3d5] h-14 placeholder:text-[#5a8c5e] p-[15px] text-base font-normal leading-normal"
-                                value="" />
+                            <input id="alert_crop" placeholder="e.g. Wheat"
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#101911] border border-[#d3e3d5] bg-[#f9fbf9] h-14 placeholder:text-[#5a8c5e] p-[15px] text-base font-normal leading-normal" />
                         </label>
-                        <label class="flex flex-col min-w-40 flex-1">
-                            <p class="text-[#101911] text-base font-medium leading-normal pb-2">Mandi State</p>
-                            <input placeholder="Select State"
-                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#101911] focus:outline-0 focus:ring-0 border border-[#d3e3d5] bg-[#f9fbf9] focus:border-[#d3e3d5] h-14 placeholder:text-[#5a8c5e] p-[15px] text-base font-normal leading-normal"
-                                value="" />
-                        </label>
-                    </div>
-                    <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
-                        <label class="flex flex-col min-w-40 flex-1">
+
+                        <label class="flex flex-col min-w-40 flex-1 relative">
                             <p class="text-[#101911] text-base font-medium leading-normal pb-2">Mandi</p>
-                            <div class="flex w-full flex-1 items-stretch rounded-xl">
-                                <input placeholder="Select Mandi"
-                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#101911] focus:outline-0 focus:ring-0 border border-[#d3e3d5] bg-[#f9fbf9] focus:border-[#d3e3d5] h-14 placeholder:text-[#5a8c5e] p-[15px] rounded-r-none border-r-0 pr-2 text-base font-normal leading-normal"
-                                    value="" />
-                                <div class="text-[#5a8c5e] flex border border-[#d3e3d5] bg-[#f9fbf9] items-center justify-center pr-[15px] rounded-r-xl border-l-0"
-                                    data-icon="CaretUpDown" data-size="24px" data-weight="regular">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px"
-                                        fill="currentColor" viewBox="0 0 256 256">
-                                        <path
-                                            d="M181.66,170.34a8,8,0,0,1,0,11.32l-48,48a8,8,0,0,1-11.32,0l-48-48a8,8,0,0,1,11.32-11.32L128,212.69l42.34-42.35A8,8,0,0,1,181.66,170.34Zm-96-84.68L128,43.31l42.34,42.35a8,8,0,0,0,11.32-11.32l-48-48a8,8,0,0,0-11.32,0l-48,48A8,8,0,0,0,85.66,85.66Z">
-                                        </path>
-                                    </svg>
-                                </div>
-                            </div>
+
+                            <!-- Search Input -->
+                            <input type="text" id="market_search_input" placeholder="Type to search e.g. 'Azadpur'"
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#101911] border border-[#d3e3d5] bg-[#f9fbf9] h-14 p-[15px] text-base font-normal leading-normal"
+                                autocomplete="off">
+
+                            <!-- Hidden ID Store -->
+                            <input type="hidden" id="alert_market_id">
+
+                            <!-- Suggestions Dropdown -->
+                            <ul id="market_suggestions"
+                                class="absolute top-[85px] left-0 w-full bg-white border border-[#d3e3d5] rounded-xl max-h-60 overflow-y-auto hidden z-50 shadow-lg">
+                            </ul>
                         </label>
                     </div>
-                    <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+
+                    <script>
+                        let allMarkets = [];
+
+                        async function fetchMarkets() {
+                            try {
+                                const res = await fetch("/api/markets/");
+                                allMarkets = await res.json();
+                            } catch (error) {
+                                console.error("Error fetching markets:", error);
+                            }
+                        }
+
+                        // Filter Logic
+                        const searchInput = document.getElementById("market_search_input");
+                        const suggestionsList = document.getElementById("market_suggestions");
+
+                        searchInput.addEventListener("input", function () {
+                            const query = this.value.toLowerCase();
+                            suggestionsList.innerHTML = "";
+
+                            if (query.length < 1) {
+                                suggestionsList.classList.add("hidden");
+                                return;
+                            }
+
+                            const matches = allMarkets.filter(m =>
+                                m.name.toLowerCase().includes(query) ||
+                                m.district.toLowerCase().includes(query)
+                            );
+
+                            if (matches.length > 0) {
+                                matches.forEach(m => {
+                                    const li = document.createElement("li");
+                                    li.className = "px-4 py-2 hover:bg-[#e9f1ea] cursor-pointer text-[#101911] text-sm";
+                                    li.textContent = `${m.name} (${m.district}, ${m.state})`;
+                                    li.onclick = () => selectMarket(m.id, m.name);
+                                    suggestionsList.appendChild(li);
+                                });
+                                suggestionsList.classList.remove("hidden");
+                            } else {
+                                suggestionsList.classList.add("hidden");
+                            }
+                        });
+
+
+                        function selectMarket(id, name) {
+                            document.getElementById("market_search_input").value = name;
+                            document.getElementById("alert_market_id").value = id;
+                            document.getElementById("market_suggestions").classList.add("hidden");
+                        }
+
+                        // Close dropdown when clicking outside
+                        document.addEventListener("click", function (e) {
+                            if (!searchInput.contains(e.target) && !suggestionsList.contains(e.target)) {
+                                suggestionsList.classList.add("hidden");
+                            }
+                        });
+                    </script>
+
+                    <div class="flex max-w-[800px] flex-wrap items-end gap-4 px-4 py-3">
                         <label class="flex flex-col min-w-40 flex-1">
-                            <p class="text-[#101911] text-base font-medium leading-normal pb-2">Target Price (₹/quintal)
-                            </p>
-                            <input placeholder="Enter Target Price"
-                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#101911] focus:outline-0 focus:ring-0 border border-[#d3e3d5] bg-[#f9fbf9] focus:border-[#d3e3d5] h-14 placeholder:text-[#5a8c5e] p-[15px] text-base font-normal leading-normal"
-                                value="" />
+                            <p class="text-[#101911] text-base font-medium leading-normal pb-2">Min Price</p>
+                            <input id="alert_min_price" type="number" placeholder="0"
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#101911] border border-[#d3e3d5] bg-[#f9fbf9] h-14 placeholder:text-[#5a8c5e] p-[15px] text-base font-normal leading-normal" />
+                        </label>
+
+                        <label class="flex flex-col min-w-40 flex-1">
+                            <p class="text-[#101911] text-base font-medium leading-normal pb-2">Max Price</p>
+                            <input id="alert_max_price" type="number" placeholder="0"
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#101911] border border-[#d3e3d5] bg-[#f9fbf9] h-14 placeholder:text-[#5a8c5e] p-[15px] text-base font-normal leading-normal" />
                         </label>
                     </div>
+
                     <div class="flex px-4 py-3 justify-end">
-                        <button
+                        <button onclick="createAlert()"
                             class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-[#1c5e21] text-[#f9fbf9] text-sm font-bold leading-normal tracking-[0.015em]">
                             <span class="truncate">Set Alert</span>
                         </button>
@@ -317,118 +490,7 @@
                                         </th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    <tr class="border-t border-t-[#d3e3d5]">
-                                        <td
-                                            class="table-d555c943-0e7d-4ff1-8914-2e4af35e192b-column-120 h-[72px] px-4 py-2 w-[400px] text-[#101911] text-sm font-normal leading-normal">
-                                            Wheat</td>
-                                        <td
-                                            class="table-d555c943-0e7d-4ff1-8914-2e4af35e192b-column-240 h-[72px] px-4 py-2 w-[400px] text-[#5a8c5e] text-sm font-normal leading-normal">
-                                            Delhi</td>
-                                        <td
-                                            class="table-d555c943-0e7d-4ff1-8914-2e4af35e192b-column-360 h-[72px] px-4 py-2 w-[400px] text-[#5a8c5e] text-sm font-normal leading-normal">
-                                            Central Delhi
-                                        </td>
-                                        <td
-                                            class="table-d555c943-0e7d-4ff1-8914-2e4af35e192b-column-480 h-[72px] px-4 py-2 w-[400px] text-[#5a8c5e] text-sm font-normal leading-normal">
-                                            ₹2,100</td>
-                                        <td
-                                            class="table-d555c943-0e7d-4ff1-8914-2e4af35e192b-column-600 h-[72px] px-4 py-2 w-[400px] text-[#5a8c5e] text-sm font-normal leading-normal">
-                                            ₹2,200</td>
-                                        <td
-                                            class="table-d555c943-0e7d-4ff1-8914-2e4af35e192b-column-720 h-[72px] px-4 py-2 w-[400px] text-[#5a8c5e] text-sm font-normal leading-normal">
-                                            2 hours ago
-                                        </td>
-                                    </tr>
-                                    <tr class="border-t border-t-[#d3e3d5]">
-                                        <td
-                                            class="table-d555c943-0e7d-4ff1-8914-2e4af35e192b-column-120 h-[72px] px-4 py-2 w-[400px] text-[#101911] text-sm font-normal leading-normal">
-                                            Rice</td>
-                                        <td
-                                            class="table-d555c943-0e7d-4ff1-8914-2e4af35e192b-column-240 h-[72px] px-4 py-2 w-[400px] text-[#5a8c5e] text-sm font-normal leading-normal">
-                                            Maharashtra
-                                        </td>
-                                        <td
-                                            class="table-d555c943-0e7d-4ff1-8914-2e4af35e192b-column-360 h-[72px] px-4 py-2 w-[400px] text-[#5a8c5e] text-sm font-normal leading-normal">
-                                            Mumbai</td>
-                                        <td
-                                            class="table-d555c943-0e7d-4ff1-8914-2e4af35e192b-column-480 h-[72px] px-4 py-2 w-[400px] text-[#5a8c5e] text-sm font-normal leading-normal">
-                                            ₹1,750</td>
-                                        <td
-                                            class="table-d555c943-0e7d-4ff1-8914-2e4af35e192b-column-600 h-[72px] px-4 py-2 w-[400px] text-[#5a8c5e] text-sm font-normal leading-normal">
-                                            ₹1,850</td>
-                                        <td
-                                            class="table-d555c943-0e7d-4ff1-8914-2e4af35e192b-column-720 h-[72px] px-4 py-2 w-[400px] text-[#5a8c5e] text-sm font-normal leading-normal">
-                                            3 hours ago
-                                        </td>
-                                    </tr>
-                                    <tr class="border-t border-t-[#d3e3d5]">
-                                        <td
-                                            class="table-d555c943-0e7d-4ff1-8914-2e4af35e192b-column-120 h-[72px] px-4 py-2 w-[400px] text-[#101911] text-sm font-normal leading-normal">
-                                            Cotton</td>
-                                        <td
-                                            class="table-d555c943-0e7d-4ff1-8914-2e4af35e192b-column-240 h-[72px] px-4 py-2 w-[400px] text-[#5a8c5e] text-sm font-normal leading-normal">
-                                            Gujarat</td>
-                                        <td
-                                            class="table-d555c943-0e7d-4ff1-8914-2e4af35e192b-column-360 h-[72px] px-4 py-2 w-[400px] text-[#5a8c5e] text-sm font-normal leading-normal">
-                                            Ahmedabad
-                                        </td>
-                                        <td
-                                            class="table-d555c943-0e7d-4ff1-8914-2e4af35e192b-column-480 h-[72px] px-4 py-2 w-[400px] text-[#5a8c5e] text-sm font-normal leading-normal">
-                                            ₹6,400</td>
-                                        <td
-                                            class="table-d555c943-0e7d-4ff1-8914-2e4af35e192b-column-600 h-[72px] px-4 py-2 w-[400px] text-[#5a8c5e] text-sm font-normal leading-normal">
-                                            ₹6,600</td>
-                                        <td
-                                            class="table-d555c943-0e7d-4ff1-8914-2e4af35e192b-column-720 h-[72px] px-4 py-2 w-[400px] text-[#5a8c5e] text-sm font-normal leading-normal">
-                                            1 hour ago
-                                        </td>
-                                    </tr>
-                                    <tr class="border-t border-t-[#d3e3d5]">
-                                        <td
-                                            class="table-d555c943-0e7d-4ff1-8914-2e4af35e192b-column-120 h-[72px] px-4 py-2 w-[400px] text-[#101911] text-sm font-normal leading-normal">
-                                            Soybean</td>
-                                        <td
-                                            class="table-d555c943-0e7d-4ff1-8914-2e4af35e192b-column-240 h-[72px] px-4 py-2 w-[400px] text-[#5a8c5e] text-sm font-normal leading-normal">
-                                            Madhya Pradesh
-                                        </td>
-                                        <td
-                                            class="table-d555c943-0e7d-4ff1-8914-2e4af35e192b-column-360 h-[72px] px-4 py-2 w-[400px] text-[#5a8c5e] text-sm font-normal leading-normal">
-                                            Indore</td>
-                                        <td
-                                            class="table-d555c943-0e7d-4ff1-8914-2e4af35e192b-column-480 h-[72px] px-4 py-2 w-[400px] text-[#5a8c5e] text-sm font-normal leading-normal">
-                                            ₹4,400</td>
-                                        <td
-                                            class="table-d555c943-0e7d-4ff1-8914-2e4af35e192b-column-600 h-[72px] px-4 py-2 w-[400px] text-[#5a8c5e] text-sm font-normal leading-normal">
-                                            ₹4,600</td>
-                                        <td
-                                            class="table-d555c943-0e7d-4ff1-8914-2e4af35e192b-column-720 h-[72px] px-4 py-2 w-[400px] text-[#5a8c5e] text-sm font-normal leading-normal">
-                                            4 hours ago
-                                        </td>
-                                    </tr>
-                                    <tr class="border-t border-t-[#d3e3d5]">
-                                        <td
-                                            class="table-d555c943-0e7d-4ff1-8914-2e4af35e192b-column-120 h-[72px] px-4 py-2 w-[400px] text-[#101911] text-sm font-normal leading-normal">
-                                            Sugarcane
-                                        </td>
-                                        <td
-                                            class="table-d555c943-0e7d-4ff1-8914-2e4af35e192b-column-240 h-[72px] px-4 py-2 w-[400px] text-[#5a8c5e] text-sm font-normal leading-normal">
-                                            Maharashtra
-                                        </td>
-                                        <td
-                                            class="table-d555c943-0e7d-4ff1-8914-2e4af35e192b-column-360 h-[72px] px-4 py-2 w-[400px] text-[#5a8c5e] text-sm font-normal leading-normal">
-                                            Pune</td>
-                                        <td
-                                            class="table-d555c943-0e7d-4ff1-8914-2e4af35e192b-column-480 h-[72px] px-4 py-2 w-[400px] text-[#5a8c5e] text-sm font-normal leading-normal">
-                                            ₹340</td>
-                                        <td
-                                            class="table-d555c943-0e7d-4ff1-8914-2e4af35e192b-column-600 h-[72px] px-4 py-2 w-[400px] text-[#5a8c5e] text-sm font-normal leading-normal">
-                                            ₹360</td>
-                                        <td
-                                            class="table-d555c943-0e7d-4ff1-8914-2e4af35e192b-column-720 h-[72px] px-4 py-2 w-[400px] text-[#5a8c5e] text-sm font-normal leading-normal">
-                                            2 hours ago
-                                        </td>
-                                    </tr>
+                                <tbody id="live-prices-body">
                                 </tbody>
                             </table>
                         </div>

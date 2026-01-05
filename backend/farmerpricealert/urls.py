@@ -9,7 +9,7 @@ from .views import (
     gov_market_prices,
     market_prices_page,
     profile_page,
-    alerts_page,get_profile,get_alerts,create_alert,get_past_alerts,list_markets,delete_alert,update_alert
+    alerts_page,get_profile,get_alerts,create_alert,get_past_alerts,list_markets,delete_alert,update_alert,get_dashboard_prices
 )
 from django.views.decorators.csrf import csrf_exempt
 from .views import update_profile, change_password, delete_account
@@ -46,6 +46,7 @@ urlpatterns = [
     path("api/alerts/<int:alert_id>/update/", update_alert, name="update_alert"),
 
     # ⭐ THIS ONE RETURNS JSON (DATA)
+    path("api/market-prices/recent/", get_dashboard_prices, name="get_dashboard_prices"),
     path("api/gov/market-prices/", gov_market_prices, name="gov_market_prices"),
 
     path("dashboard/", dashboard_page, name="dashboard"),

@@ -610,3 +610,66 @@ def logout_user(request):
     response.delete_cookie("refresh", path="/")
     return response
 
+
+@api_view(["GET"])
+@authentication_classes([CookieJWTAuthentication, SessionAuthentication])
+@permission_classes([IsAuthenticated])
+def get_dashboard_prices(request):
+    """
+    Fetches:
+    1. Table Data: The 5 most recent price updates from the DB.
+    2. Card Data: The latest price for specific crops (Wheat, Rice, etc.) from the DB.
+    """
+    user = request.user
+    profile = UserProfile.objects.filter(user=user).first()
+    
+    # Base query filtered by user's location (optional but recommended)
+    base_query = MarketPrice.objects.select_related("crop", "market")
+    
+    if profile:
+        if profile.location_state:
+            base_query = base_query.filter(market__state__icontains=profile.location_state)
+        if profile.location_district:
+            base_query = base_query.filter(market__district__icontains=profile.location_district)
+        
+    # --- PART 1: Table Data (Strictly latest 5 records) ---
+    latest_prices = base_query.order_by("-arrival_date")[:5]
+    table_data = []
+    for p in latest_prices:
+        table_data.append({
+            "crop_name": p.crop.name.title(),
+            "state": p.market.state,
+            "district": p.market.district,
+            "min_price": str(p.min_price),
+            "max_price": str(p.max_price),
+            "date": p.arrival_date.strftime("%d/%m/%Y") if p.arrival_date else "N/A"
+        })
+
+    # --- PART 2: Card Data (Specific Crops) ---
+    card_targets = ["wheat", "rice", "cotton", "soybean", "sugarcane"]
+    card_data = {}
+
+    for target in card_targets:
+        # custom logic to handle variations like Rice/Paddy or Soybean/Soyabean
+        query_filter = models.Q(crop__name__icontains=target)
+        if target == "rice":
+            query_filter |= models.Q(crop__name__icontains="paddy")
+        elif target == "soybean":
+            query_filter |= models.Q(crop__name__icontains="soyabean")
+
+        # Get the single latest price for this crop
+        price = base_query.filter(query_filter).order_by("-arrival_date").first()
+        
+        if price:
+            card_data[target] = {
+                "name": price.crop.name.title(),
+                "price": f"₹{price.modal_price}/quintal"
+            }
+        else:
+            card_data[target] = None
+
+    return Response({
+        "table_data": table_data,
+        "card_data": card_data
+    })
+

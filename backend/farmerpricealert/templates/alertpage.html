@@ -29,10 +29,11 @@
                 </div>
                 <div class="flex flex-1 justify-end gap-8">
                     <div class="flex items-center gap-9">
-                        <a class="text-[#111811] text-sm font-medium leading-normal" href="#">Home</a>
-                        <a class="text-[#111811] text-sm font-medium leading-normal" href="#">Market Prices</a>
-                        <a class="text-[#111811] text-sm font-medium leading-normal" href="#">My Alerts</a>
-                        <a class="text-[#111811] text-sm font-medium leading-normal" href="#">Resources</a>
+                        <a class="text-[#111811] text-sm font-medium leading-normal" href="/dashboard/">Home</a>
+                        <a class="text-[#111811] text-sm font-medium leading-normal" href="/market-prices/">Market
+                            Prices</a>
+                        <a class="text-[#111811] text-sm font-medium leading-normal" href="/alerts/">My Alerts</a>
+
                     </div>
                     <button
                         class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 bg-[#f0f4f0] text-[#111811] gap-2 text-sm font-bold leading-normal tracking-[0.015em] min-w-0 px-2.5">
@@ -45,7 +46,8 @@
                             </svg>
                         </div>
                     </button>
-                    <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10"
+                    <div id="header-profile-img"
+                        class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10"
                         style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuC0XFrl7klyqW_Q85-kkjamQxFVEeRXXEFFxw3mjxs9swRYZv00C80JnRoWYsJfpiomVBb6IQnVBvxPmPKFp2A_zLVXzlOJPJ4AKu2ySavON-HRypCzKNZwVb7GSlusdRMqWptcLCr1-V9SILWys7ClJcc7acnYSX85XZ9tC0Md8RELn0Wy8dMtf8gikpfKiDwRlkdcpuvaduI3KY4ny2AquO-Ehk8UZhuK3ruvw4sDoMZR_KvKchSeknMQMq821FhewmzqitMjgUE");'>
                     </div>
                 </div>
@@ -280,6 +282,16 @@
         }
 
         document.addEventListener("DOMContentLoaded", () => {
+            fetch("/api/profile/me/", { credentials: "include" })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.profile_image) {
+                        const profileImgDiv = document.getElementById("header-profile-img");
+                        if (profileImgDiv) {
+                            profileImgDiv.style.backgroundImage = `url("${data.profile_image}")`;
+                        }
+                    }
+                });
 
             fetch("/api/alerts/", {
                 credentials: "include"
@@ -388,9 +400,11 @@
                 </td>
 
 
-                <button class="rounded-xl bg-[#f0f4f0] px-4 py-1 text-sm">
-                    ${a.status === "triggered" ? "Completed" : a.status}
-                </button>
+                <td class="px-4 py-2">
+                    <button class="rounded-xl bg-[#f0f4f0] px-4 py-1 text-sm">
+                        ${a.status === "triggered" ? "Completed" : a.status}
+                    </button>
+                </td>
 
 
                 <td class="px-4 py-2 text-sm text-[#618961] font-bold">
@@ -431,9 +445,11 @@
                 <td class="px-4 py-2 text-sm text-[#618961]">${a.market}</td>
                 <td class="px-4 py-2 text-sm text-[#618961]">₹${a.price_reached}</td>
 
-                <button class="rounded-xl bg-[#f0f4f0] px-4 py-1 text-sm">
-                    ${a.status === "triggered" ? "Completed" : a.status}
-                </button>
+                <td class="px-4 py-2">
+                    <button class="rounded-xl bg-[#f0f4f0] px-4 py-1 text-sm">
+                        ${a.status === "triggered" ? "Completed" : a.status}
+                    </button>
+                </td>
 
                 <td class="px-4 py-2 text-sm text-[#618961]">
                     ${a.date}

@@ -63,7 +63,8 @@
                         </div>
                     </button>
 
-                    <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10"
+                    <div id="market-header-img"
+                        class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10"
                         style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCMI0aj8z-fKpwRFRqm3H2fgWoUmyVdRo4v7l2cZvtNijAixlFnixesfG48ILRaM0Gl7NgWIBh1vq8nb0rRAh5o9YYTctLqoq0rXQOMTuEzntySGR1CLWn_SR5RJ63iWIpt2bzFZ71uLiXV8zyzwcBkfvX15-lE7wz8G6Gj91RSRV8hicyV1xYJyyHJPgAurF3dHY09opRTyECXuFg2FsYDBeJ9NHaxB5eZOvGbIQvoZxGY-LdMMj-IQKi6zNtlkQ9NIlVEAAglV4s");'>
                     </div>
 
@@ -154,6 +155,20 @@
     </div>
 
     <script>
+        // Add this anywhere inside your <script> tag
+        document.addEventListener("DOMContentLoaded", () => {
+            fetch("/api/profile/me/", { credentials: "include" })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.profile_image) {
+                        const img = document.getElementById("market-header-img");
+                        if (img) {
+                            img.style.backgroundImage = `url("${data.profile_image}")`;
+                        }
+                    }
+                })
+                .catch(err => console.error("Profile sync failed:", err));
+        });
         // Base API URL configuration
         const API_BASE_URL = "/api/gov/market-prices/";
 

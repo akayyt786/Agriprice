@@ -38,7 +38,7 @@
                                 fill="currentColor"></path>
                         </svg>
                     </div>
-                    <h2 class="text-[#121713] text-lg font-bold leading-tight tracking-[-0.015em]">AgriAssist</h2>
+                    <h2 class="text-[#121713] text-lg font-bold leading-tight tracking-[-0.015em]">Agriprice</h2>
                 </div>
                 <div class="flex flex-1 justify-end gap-8">
                     <div class="flex items-center gap-9">
@@ -61,7 +61,8 @@
                                 </svg>
                             </div>
                         </button>
-                        <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10"
+                        <div id="header_profile_image"
+                            class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10"
                             style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCMI0aj8z-fKpwRFRqm3H2fgWoUmyVdRo4v7l2cZvtNijAixlFnixesfG48ILRaM0Gl7NgWIBh1vq8nb0rRAh5o9YYTctLqoq0rXQOMTuEzntySGR1CLWn_SR5RJ63iWIpt2bzFZ71uLiXV8zyzwcBkfvX15-lE7wz8G6Gj91RSRV8hicyV1xYJyyHJPgAurF3dHY09opRTyECXuFg2FsYDBeJ9NHaxB5eZOvGbIQvoZxGY-LdMMj-IQKi6zNtlkQ9NIlVEAAglV4s");'>
                         </div>
                     </div>
@@ -228,22 +229,31 @@
         }
 
         // Load profile data
-        document.addEventListener("DOMContentLoaded", () => {
-            fetch("/api/profile/me/", { credentials: "include" })
-                .then(r => r.json())
-                .then(data => {
-                    document.getElementById("full_name").value = data.full_name || "";
-                    document.getElementById("email").value = data.email || "";
-                    document.getElementById("phone").value = data.phone || "";
-                    document.getElementById("state").value = data.state || "";
-                    document.getElementById("district").value = data.district || "";
+       document.addEventListener("DOMContentLoaded", () => {
+    fetch("/api/profile/me/", { credentials: "include" })
+        .then(r => r.json())
+        .then(data => {
+            // Fill text fields
+            document.getElementById("full_name").value = data.full_name || "";
+            document.getElementById("email").value = data.email || "";
+            document.getElementById("phone").value = data.phone || "";
+            document.getElementById("state").value = data.state || "";
+            document.getElementById("district").value = data.district || "";
 
-                    if (data.profile_image) {
-                        document.getElementById("profile_preview").style.backgroundImage = `url("${data.profile_image}")`;
-                    }
-                })
-                .catch(() => { });
-        });
+            // Sync Images (Preview AND Header)
+            if (data.profile_image) {
+                // 1. Update the big center preview
+                document.getElementById("profile_preview").style.backgroundImage = `url("${data.profile_image}")`;
+                
+                // 2. Update the top header image
+                const headerImg = document.getElementById("header_profile_image");
+                if (headerImg) {
+                    headerImg.style.backgroundImage = `url("${data.profile_image}")`;
+                }
+            }
+        })
+        .catch(err => console.error("Error loading profile:", err));
+});
 
         // Save profile (text fields)
         async function saveProfile() {
