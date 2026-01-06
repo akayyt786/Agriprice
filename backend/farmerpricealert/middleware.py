@@ -1,36 +1,40 @@
-from .authenticate import CookieJWTAuthentication
 from django.utils.functional import SimpleLazyObject
 from django.contrib.auth.models import AnonymousUser
+from django.contrib.auth import get_user as get_session_user  # Import standard Django session auth
+from .authenticate import CookieJWTAuthentication
 
-def get_user_from_jwt(request):
+def get_user_unified(request):
     """
-    Helper to authenticate against CookieJWTAuthentication.
-    Attempts to extract and validate JWT from cookies.
-    Returns User if valid, AnonymousUser if not.
+    Authentication Logic:
+    1. Try to authenticate via JWT Cookie (your custom login).
+    2. If that fails (returns None or errors), try standard Django Session (used by Google Login).
+    3. If both fail, return AnonymousUser (handled by get_session_user default).
     """
+    
+    # 1. Try JWT Authentication first
     authenticator = CookieJWTAuthentication()
     try:
+        # authenticate() returns (user, token) if successful, or None
         result = authenticator.authenticate(request)
         if result is not None:
             user, token = result
             return user
-    except Exception as e:
-        # Token validation failed - user is anonymous
+    except Exception:
+        # If JWT fails (expired, invalid, or missing), just pass.
+        # We don't want to crash; we want to try the next method.
         pass
-    return AnonymousUser()
+        
+    # 2. Fallback to Standard Session Authentication
+    # This checks request.session, which is where Allauth stores the Google user.
+    return get_session_user(request)
 
 class JWTAuthMiddleware:
-    """
-    Middleware to authenticate users from JWT cookies for regular Django views.
-    This allows both API endpoints and server-rendered pages to use JWT authentication.
-    """
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
-        # Always try to authenticate from JWT, even if session exists
-        # This ensures JWT takes priority over sessions
-        request.user = SimpleLazyObject(lambda: get_user_from_jwt(request))
-
-        response = self.get_response(request)
-        return response
+        # Overwrite request.user with our unified helper.
+        # SimpleLazyObject ensures the code only runs when request.user is actually accessed.
+        request.user = SimpleLazyObject(lambda: get_user_unified(request))
+        
+        return self.get_response(request)

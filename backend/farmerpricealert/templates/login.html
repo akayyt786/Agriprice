@@ -14,7 +14,7 @@
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,700;1,700&display=swap"
         rel="stylesheet">
     <!-- Lucide Icons -->
-   <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         :root {
             --primary: #2ecc71;
@@ -515,6 +515,19 @@
     </div>
 
     <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const verified = urlParams.get('verified');
+            const msg = document.getElementById("msg");
+
+            if (verified === 'true') {
+                msg.innerText = "Email verified successfully! You can now login.";
+                msg.style.color = "green";
+            } else if (verified === 'already') {
+                msg.innerText = "Account is already verified.";
+                msg.style.color = "blue";
+            }
+        });
         function getCookie(name) {
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
@@ -530,7 +543,7 @@
             return cookieValue;
         }
         lucide.createIcons();
-        
+
 
         async function loginUser() {
             const username = document.getElementById("email").value;

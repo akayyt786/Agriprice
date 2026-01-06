@@ -1,9 +1,17 @@
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import SessionAuthentication
+from rest_framework.permissions import AllowAny
+from django.contrib.auth import logout  
 from django.contrib.auth import authenticate
+from django.core.mail import send_mail
+from django.conf import settings
+from django.urls import reverse
+import jwt
+from django.shortcuts import redirect
+from django.contrib.auth import get_user_model
 from django.shortcuts import redirect, render
 from django.views.decorators.cache import never_cache
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.db import IntegrityError, transaction, models
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -35,7 +43,7 @@ from .authenticate import CookieJWTAuthentication
 BASE_URL = "https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070"
 BASE_URL = "https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070"
 API_KEY = settings.GOV_API_KEY
-
+User = get_user_model()
 def registration_page(request):
     # If already authenticated, redirect to dashboard
     if _is_authenticated(request):
@@ -95,15 +103,66 @@ def alerts_page(request):
 @method_decorator(csrf_exempt, name='dispatch')
 class RegisterView(CreateAPIView):
     serializer_class = RegisterSerializer
+    permission_classes = [AllowAny]       # Allow anyone (even strangers) to access this
+    authentication_classes = []
+
     @transaction.atomic
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        user = serializer.save()
+        user.is_active = False 
+        user.save()
+        token = jwt.encode(
+            {"user_id": user.id, "exp": datetime.utcnow() + timedelta(hours=24)},
+            settings.SECRET_KEY,
+            algorithm="HS256"
+        )
+        verification_link = f"http://127.0.0.1:8000/api/verify-email/{token}/"
+        try:
+            send_mail(
+                subject="Verify your AgriPrice Account",
+                message=f"Hi {user.username},\n\nPlease verify your account by clicking the link below:\n\n{verification_link}\n\nThis link expires in 24 hours.",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            # If email fails, delete the inactive user so they can try again
+            user.delete()
+            return Response({"error": "Failed to send email. Please check your address."}, status=500)
+        
         return Response(
-            {"message": "User registered successfully"},
+            {"message": "User registered successfully", "token": token},
             status=status.HTTP_201_CREATED
         )
+
+
+from rest_framework.decorators import api_view, permission_classes, authentication_classes # <--- Import this
+
+@api_view(['GET'])
+@permission_classes([])      # No login required
+@authentication_classes([])  # <--- ADD THIS: Ignore cookies/auth for this view
+def verify_email(request, token):
+    try:
+        # Decode token
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+        user = User.objects.get(id=payload['user_id'])
+        
+        if user.is_active:
+            return redirect('/login/?verified=already')
+            
+        user.is_active = True
+        user.save()
+        
+        return redirect('/login/?verified=true')
+        
+    except jwt.ExpiredSignatureError:
+        return JsonResponse({'error': 'Activation link expired'}, status=400)
+    except jwt.DecodeError:
+        return JsonResponse({'error': 'Invalid token'}, status=400)
+    except User.DoesNotExist:
+        return JsonResponse({'error': 'User not found'}, status=404)
 
 @never_cache
 @api_view(["GET"])
@@ -124,33 +183,55 @@ def list_markets(request):
 
 @method_decorator(csrf_exempt, name='dispatch')
 class CookieLoginView(APIView):
-    def post(self, request):
+    # 1. ALLOW ANONYMOUS ACCESS (Critical Fix)
+    permission_classes = [AllowAny]
+    authentication_classes = [] 
 
-        # 1. Get username and password from the request
+    def post(self, request):
         username = request.data.get("username")
         password = request.data.get("password")
 
-        # 2. Check if the user exists and password is correct
+        if not username or not password:
+            return JsonResponse({"detail": "Username and password are required"}, status=400)
+
+        # 2. CHECK FOR INACTIVE USERS (Critical Fix)
+        User = get_user_model()
+        user_obj = User.objects.filter(username=username).first()
+
+        if user_obj is not None:
+            # If user exists, check password manually
+            if user_obj.check_password(password):
+                # If password is correct but account is inactive
+                if not user_obj.is_active:
+                    return JsonResponse(
+                        {"detail": "Account is inactive. Please check your email to verify."}, 
+                        status=401
+                    )
+            else:
+                 # User exists but password is wrong
+                 return JsonResponse({"detail": "Invalid username or password"}, status=401)
+        
+        # 3. STANDARD AUTHENTICATION
+        # (If we get here, the user is either active or doesn't exist)
         user = authenticate(username=username, password=password)
 
         if user is None:
             return JsonResponse({"detail": "Invalid username or password"}, status=401)
 
-        # 3. Create JWT tokens
+        # 4. GENERATE TOKENS
         refresh = RefreshToken.for_user(user)
         access = refresh.access_token
 
-        # 4. Create a response
+        # 5. SET COOKIES
         response = JsonResponse({"message": "Login successful"})
-
-        # 5. Save tokens as cookies
+        
         response.set_cookie(
             "access",
             value=str(access),
-            httponly=True,   # JavaScript cannot read it
-            secure=False,    # change to True when using HTTPS
+            httponly=True,
+            secure=False,  # Set to True if using HTTPS
             samesite="Lax",
-            path="/",
+            path="/"
         )
 
         response.set_cookie(
@@ -159,8 +240,9 @@ class CookieLoginView(APIView):
             httponly=True,
             secure=False,
             samesite="Lax",
-            path="/",
+            path="/"
         )
+        
         return response
 
 # Get government market prices
@@ -473,10 +555,34 @@ def process_alert(alert, price_obj, message):
                 message=message
             )
 
+            # Send notification email using user.email
+            user_email = alert.user.email  # comes from the User model
+            if user_email:
+                try:
+                    send_mail(
+                        subject="Market Alert Triggered",
+                        message=(
+                            f"Hello {alert.user.username},\n\n"
+                            f"Your alert for {alert.crop.name.title()} at {alert.market.name.title()} "
+                            f"has been triggered.\n\n"
+                            f"Price range hit: {p}\n"
+                            f"Min: {round_price(price_obj.min_price)}\n"
+                            f"Modal: {round_price(price_obj.modal_price)}\n"
+                            f"Max: {round_price(price_obj.max_price)}\n"
+                            f"Date: {price_obj.arrival_date}\n\n"
+                            "Thank you."
+                        ),
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[user_email],
+                        fail_silently=True,  # set to False if you want to surface errors
+                    )
+                except Exception:
+                    # optionally log the failure
+                    pass
+
             return True
 
     return False
-
 
 #for deleting alert
 @never_cache
@@ -634,15 +740,25 @@ def delete_account(request):
     user.delete()
     return Response({"message": "Account deleted"})
 
-
 def logout_user(request):
-    """Logout user by clearing JWT cookies."""
+    """
+    Logout procedure that handles BOTH:
+    1. JWT Cookies (Custom Auth)
+    2. Django Session (Google Auth)
+    """
+    
+    # 1. Kill the Django Session (Logs out Google Users)
+    if request.user.is_authenticated:
+        logout(request)
+
+    # 2. Prepare response to clear JWT cookies
     response = JsonResponse({
         "message": "Logged out successfully",
         "redirect": "/login/"
     })
     
-    # Clear JWT tokens from cookies
+    # 3. Kill the JWT Cookies (Logs out Password Users)
+    # We set these to expire immediately
     response.set_cookie("access", "", max_age=0, expires="Thu, 01 Jan 1970 00:00:00 GMT", path="/", samesite="Lax", httponly=True, secure=False)
     response.set_cookie("refresh", "", max_age=0, expires="Thu, 01 Jan 1970 00:00:00 GMT", path="/", samesite="Lax", httponly=True, secure=False)
     

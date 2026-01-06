@@ -16,7 +16,7 @@ from .views import update_profile, change_password, delete_account
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import SessionAuthentication
 from .authenticate import CookieJWTAuthentication
-
+from .views import verify_email
 urlpatterns = [
     path("", login_page, name="login_root"),
     path("register/", registration_page, name="register_page"),
@@ -44,6 +44,7 @@ urlpatterns = [
     path("api/alerts/past/", get_past_alerts, name="past-alerts"),
     path("api/alerts/<int:alert_id>/delete/", delete_alert, name="delete_alert"),
     path("api/alerts/<int:alert_id>/update/", update_alert, name="update_alert"),
+    path("api/verify-email/<str:token>/", verify_email, name="verify_email"),
 
     # ⭐ THIS ONE RETURNS JSON (DATA)
     path("api/market-prices/recent/", get_dashboard_prices, name="get_dashboard_prices"),
