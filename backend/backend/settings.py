@@ -61,6 +61,10 @@ LOGIN_REDIRECT_URL = "/dashboard"
 LOGOUT_REDIRECT_URL = "/"
 LOGIN_URL = "/login/"
 
+# Password Reset Settings
+FRONTEND_RESET_URL = config('FRONTEND_RESET_URL', default='http://127.0.0.1:8000/reset-password')
+PASSWORD_RESET_TIMEOUT = 3600  # 1 hour
+
 AUTHENTICATION_BACKENDS = (
     "django.contrib.auth.backends.ModelBackend",
     "allauth.account.auth_backends.AuthenticationBackend",

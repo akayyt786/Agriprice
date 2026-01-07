@@ -493,6 +493,9 @@
                     <div class="input-wrapper">
                         <i data-lucide="lock" size="20"></i>
                         <input type="password" id="password" placeholder="••••••••" required>
+                        <div class="footer-text">
+    <a href="#" onclick="showForgotPasswordModal(); return false;">Forgot password?</a>
+</div>
                     </div>
                 </div>
 
@@ -511,6 +514,32 @@
             <div class="footer-text">
                 New to AgriPrice? <a href="{% url 'register_page' %}">Create an account</a>
             </div>
+        </div>
+    </div>
+
+    <!-- Forgot Password Modal -->
+    <div id="forgotPasswordModal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); flex-direction: column; align-items: center; justify-content: center;">
+        <div style="background-color: var(--white); padding: 40px; border-radius: 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-width: 400px; width: 90%; animation: slideUp 0.3s ease;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="font-size: 20px; font-weight: 700; color: var(--text-dark);">Reset Password</h3>
+                <button onclick="closeForgotPasswordModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-light);">×</button>
+            </div>
+            
+            <p style="color: var(--text-light); font-size: 14px; margin-bottom: 20px;">Enter your email address and we'll send you a link to reset your password.</p>
+            
+            <form id="forgotPasswordForm" onsubmit="sendPasswordResetEmail(); return false;">
+                <div class="input-group" style="margin-bottom: 15px;">
+                    <label for="resetEmail" style="font-size: 14px; font-weight: 600; color: var(--text-dark); margin-bottom: 8px; display: block;">Email Address</label>
+                    <div class="input-wrapper">
+                        <i data-lucide="mail" size="20"></i>
+                        <input type="email" id="resetEmail" placeholder="your@email.com" style="width: 100%; padding: 12px 12px 12px 44px; border: 2px solid #f1f5f9; background: #f8fafc; border-radius: 12px; font-size: 14px; color: var(--text-dark); outline: none;" required>
+                    </div>
+                </div>
+
+                <button type="submit" style="width: 100%; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: var(--white); border: none; padding: 12px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; margin-top: 15px;">Send Reset Link</button>
+            </form>
+
+            <div id="resetMessage" style="margin-top: 15px; text-align: center; font-size: 14px; font-weight: 600;"></div>
         </div>
     </div>
 
@@ -576,6 +605,61 @@
             } catch (err) {
                 console.error(err);
                 document.getElementById("msg").innerText = "Network error";
+            }
+        }
+
+        // Forgot Password Modal Functions
+        function showForgotPasswordModal() {
+            const modal = document.getElementById("forgotPasswordModal");
+            modal.style.display = "flex";
+        }
+
+        function closeForgotPasswordModal() {
+            const modal = document.getElementById("forgotPasswordModal");
+            modal.style.display = "none";
+            document.getElementById("forgotPasswordForm").reset();
+            document.getElementById("resetMessage").innerText = "";
+        }
+
+        async function sendPasswordResetEmail() {
+            const email = document.getElementById("resetEmail").value.trim();
+            const msgDiv = document.getElementById("resetMessage");
+
+            if (!email) {
+                msgDiv.innerText = "Please enter your email address";
+                msgDiv.style.color = "red";
+                return;
+            }
+
+            try {
+                const res = await fetch("/api/password-reset/", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ email })
+                });
+
+                const data = await res.json();
+
+                msgDiv.innerText = data.detail || "Check your email for reset instructions";
+                msgDiv.style.color = "green";
+
+                // Close modal after 3 seconds
+                setTimeout(() => {
+                    closeForgotPasswordModal();
+                }, 3000);
+            } catch (err) {
+                console.error(err);
+                msgDiv.innerText = "An error occurred. Please try again.";
+                msgDiv.style.color = "red";
+            }
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById("forgotPasswordModal");
+            if (event.target === modal) {
+                closeForgotPasswordModal();
             }
         }
     </script>

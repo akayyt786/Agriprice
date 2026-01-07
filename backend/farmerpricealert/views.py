@@ -23,6 +23,10 @@ from .serializers import RegisterSerializer
 from .models import User
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.core.files.storage import default_storage
 from .models import (
     SiteContent,
     DashboardImage,
@@ -44,6 +48,11 @@ BASE_URL = "https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d007
 BASE_URL = "https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070"
 API_KEY = settings.GOV_API_KEY
 User = get_user_model()
+
+def reset_password_page(request):
+    """Display the reset password form (no auth required)."""
+    return render(request, "reset_password.html")
+
 def registration_page(request):
     # If already authenticated, redirect to dashboard
     if _is_authenticated(request):
@@ -691,6 +700,7 @@ def get_profile(request):
 def update_profile(request):
     user = request.user
     profile, created = UserProfile.objects.get_or_create(user=user)
+    old_image_path = profile.profile_image.name if profile.profile_image else None
 
     # Handling both form-data (for image) and JSON (for text)
     if request.content_type == 'application/json':
@@ -709,6 +719,11 @@ def update_profile(request):
             profile.profile_image = request.FILES['profile_image']
 
     profile.save()
+
+    # Remove previously stored image after successful save (if a new one was uploaded)
+    if 'profile_image' in request.FILES and old_image_path and old_image_path != profile.profile_image.name:
+        default_storage.delete(old_image_path)
+
     return Response({"message": "Profile updated"})
 
 
@@ -827,4 +842,110 @@ def get_dashboard_prices(request):
         "table_data": table_data,
         "card_data": card_data
     })
+
+
+# ==========================
+#  PASSWORD RESET ENDPOINTS
+# ==========================
+class PasswordResetRequestView(APIView):
+    """
+    POST: User submits email to request password reset link.
+    Returns generic success message regardless of user existence (avoid email enumeration).
+    """
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        email = request.data.get("email", "").strip().lower()
+        
+        if not email:
+            return Response(
+                {"detail": "Email is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user = User.objects.filter(email__iexact=email).first()
+        
+        if user:
+            # Generate token and uid
+            token = PasswordResetTokenGenerator().make_token(user)
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            reset_url = f"{settings.FRONTEND_RESET_URL}?uid={uid}&token={token}"
+            
+            # Send email
+            try:
+                send_mail(
+                    subject="Reset your password",
+                    message=(
+                        f"Hi {user.username},\n\n"
+                        f"Click the link below to reset your password:\n"
+                        f"{reset_url}\n\n"
+                        f"This link expires in 1 hour.\n\n"
+                        f"If you didn't request this, ignore this email."
+                    ),
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[user.email],
+                    fail_silently=False,
+                )
+            except Exception as e:
+                print(f"Email send failed: {str(e)}")
+                # Don't reveal the error to avoid email enumeration
+        
+        # Generic response regardless of user existence
+        return Response({
+            "detail": "If that account exists, we've sent password reset instructions to your email."
+        })
+
+
+class PasswordResetConfirmView(APIView):
+    """
+    POST: User submits uid, token, and new_password to reset their password.
+    Validates token and sets new password.
+    """
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        uidb64 = request.data.get("uid")
+        token = request.data.get("token")
+        new_password = request.data.get("new_password")
+        
+        if not (uidb64 and token and new_password):
+            return Response(
+                {"detail": "uid, token, and new_password are required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validate password strength (Django's validators will be applied via set_password)
+        if len(new_password) < 8:
+            return Response(
+                {"detail": "Password must be at least 8 characters long"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            # Decode uid
+            uid = force_str(urlsafe_base64_decode(uidb64))
+            user = User.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            return Response(
+                {"detail": "Invalid reset link"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check token validity
+        if not PasswordResetTokenGenerator().check_token(user, token):
+            return Response(
+                {"detail": "Invalid or expired reset link"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Set new password
+        user.set_password(new_password)
+        user.save()
+        
+        return Response({
+            "detail": "Your password has been successfully reset. You can now log in with your new password."
+        })
+
 

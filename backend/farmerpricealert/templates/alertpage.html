@@ -5,9 +5,10 @@
     <link rel="stylesheet" as="style" onload="this.rel='stylesheet'"
         href="https://fonts.googleapis.com/css2?display=swap&amp;family=Inter%3Awght%40400%3B500%3B700%3B900&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900" />
 
-    <title>Stitch Design</title>
+    <title>Agriprice</title>
     <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64," />
-
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 </head>
 
@@ -18,12 +19,8 @@
             <header
                 class="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#f0f4f0] px-10 py-3">
                 <div class="flex items-center gap-4 text-[#111811]">
-                    <div class="size-4">
-                        <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path
-                                d="M4 42.4379C4 42.4379 14.0962 36.0744 24 41.1692C35.0664 46.8624 44 42.2078 44 42.2078L44 7.01134C44 7.01134 35.068 11.6577 24.0031 5.96913C14.0971 0.876274 4 7.27094 4 7.27094L4 42.4379Z"
-                                fill="currentColor"></path>
-                        </svg>
+                    <div style="background: #2ecc71; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 8px; box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);">
+                        <i data-lucide="leaf" color="white" size="24" style="margin: 0;"></i>
                     </div>
                     <h2 class="text-[#111811] text-lg font-bold leading-tight tracking-[-0.015em]">Agriprice</h2>
                 </div>
@@ -46,9 +43,22 @@
                             </svg>
                         </div>
                     </button>
-                    <div id="header-profile-img"
-                        class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10"
-                        style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuC0XFrl7klyqW_Q85-kkjamQxFVEeRXXEFFxw3mjxs9swRYZv00C80JnRoWYsJfpiomVBb6IQnVBvxPmPKFp2A_zLVXzlOJPJ4AKu2ySavON-HRypCzKNZwVb7GSlusdRMqWptcLCr1-V9SILWys7ClJcc7acnYSX85XZ9tC0Md8RELn0Wy8dMtf8gikpfKiDwRlkdcpuvaduI3KY4ny2AquO-Ehk8UZhuK3ruvw4sDoMZR_KvKchSeknMQMq821FhewmzqitMjgUE");'>
+                    <div class="relative">
+                        <button id="avatarBtn" aria-expanded="false" aria-controls="avatarMenu"
+                            class="bg-center bg-no-repeat bg-cover rounded-full size-10 border border-[#e1e8e2] shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2ecc71]/40"
+                            style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuC0XFrl7klyqW_Q85-kkjamQxFVEeRXXEFFxw3mjxs9swRYZv00C80JnRoWYsJfpiomVBb6IQnVBvxPmPKFp2A_zLVXzlOJPJ4AKu2ySavON-HRypCzKNZwVb7GSlusdRMqWptcLCr1-V9SILWys7ClJcc7acnYSX85XZ9tC0Md8RELn0Wy8dMtf8gikpfKiDwRlkdcpuvaduI3KY4ny2AquO-Ehk8UZhuK3ruvw4sDoMZR_KvKchSeknMQMq821FhewmzqitMjgUE");'>
+                        </button>
+                        <div id="avatarMenu"
+                            class="hidden absolute right-0 mt-2 w-44 rounded-xl bg-white/90 backdrop-blur border border-[#e6efe7] shadow-[0_20px_50px_rgba(0,0,0,0.08)] ring-1 ring-[#e6efe7]/60 overflow-hidden">
+                            <a href="/profile/"
+                                class="flex items-center gap-2 px-4 py-2.5 text-sm text-[#121713] hover:bg-[#f1f5f1]">
+                                Manage Profile
+                            </a>
+                            <button onclick="logout()"
+                                class="w-full text-left flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50">
+                                Logout
+                            </button>
+                        </div>
                     </div>
                 </div>
             </header>
@@ -286,12 +296,15 @@
                 .then(res => res.json())
                 .then(data => {
                     if (data.profile_image) {
-                        const profileImgDiv = document.getElementById("header-profile-img");
-                        if (profileImgDiv) {
-                            profileImgDiv.style.backgroundImage = `url("${data.profile_image}")`;
+                        const avatarBtn = document.getElementById("avatarBtn");
+                        if (avatarBtn) {
+                            avatarBtn.style.backgroundImage = `url("${data.profile_image}")`;
                         }
                     }
-                });
+                })
+                .catch(err => console.error("Profile sync failed:", err));
+
+            initAvatarMenu();
 
             fetch("/api/alerts/", {
                 credentials: "include"
@@ -306,6 +319,36 @@
                 });
 
         });
+        function initAvatarMenu() {
+            const avatarBtn = document.getElementById("avatarBtn");
+            const avatarMenu = document.getElementById("avatarMenu");
+
+            if (!avatarBtn || !avatarMenu) return;
+
+            const closeMenu = () => {
+                avatarMenu.classList.add("hidden");
+                avatarBtn.setAttribute("aria-expanded", "false");
+            };
+
+            avatarBtn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                const isHidden = avatarMenu.classList.toggle("hidden");
+                avatarBtn.setAttribute("aria-expanded", isHidden ? "false" : "true");
+            });
+
+            document.addEventListener("click", (e) => {
+                if (!avatarMenu.classList.contains("hidden")) {
+                    const target = e.target;
+                    if (target !== avatarBtn && !avatarMenu.contains(target)) {
+                        closeMenu();
+                    }
+                }
+            });
+
+            document.addEventListener("keydown", (e) => {
+                if (e.key === "Escape") closeMenu();
+            });
+        }
         function openCreateForm() {
             document.getElementById("alert-form").classList.remove("hidden");
         }
@@ -493,6 +536,20 @@
                 });
         }
 
+        async function logout() {
+            try {
+                const res = await fetch("/api/logout/");
+                if (res.ok) {
+                    window.location.href = "/login/";
+                } else {
+                    alert("Logout failed");
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Logout failed");
+            }
+        }
+
     </script>
     <div id="alert-form" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center">
 
@@ -541,6 +598,9 @@
             </div>
         </div>
     </div>
+    <script>
+        lucide.createIcons();
+    </script>
 
 </body>
 

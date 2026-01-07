@@ -1,40 +1,40 @@
 from django.utils.functional import SimpleLazyObject
 from django.contrib.auth.models import AnonymousUser
-from django.contrib.auth import get_user as get_session_user  # Import standard Django session auth
+from django.contrib.auth import get_user as get_session_user  # Standard Django session auth
 from .authenticate import CookieJWTAuthentication
+
 
 def get_user_unified(request):
     """
     Authentication Logic:
-    1. Try to authenticate via JWT Cookie (your custom login).
-    2. If that fails (returns None or errors), try standard Django Session (used by Google Login).
-    3. If both fail, return AnonymousUser (handled by get_session_user default).
+    1. For /admin, skip JWT and rely on Django session (admin/staff).
+    2. Otherwise, try JWT Cookie.
+    3. Fallback to standard Django Session.
     """
-    
-    # 1. Try JWT Authentication first
+    # Let admin use only session auth (avoids being “logged in” as a non-staff JWT user)
+    if request.path.startswith("/admin"):
+        return get_session_user(request)
+
+    # Try JWT Authentication first
     authenticator = CookieJWTAuthentication()
     try:
-        # authenticate() returns (user, token) if successful, or None
         result = authenticator.authenticate(request)
         if result is not None:
             user, token = result
             return user
     except Exception:
-        # If JWT fails (expired, invalid, or missing), just pass.
-        # We don't want to crash; we want to try the next method.
+        # If JWT fails (expired/invalid/missing), fall through to session
         pass
-        
-    # 2. Fallback to Standard Session Authentication
-    # This checks request.session, which is where Allauth stores the Google user.
+
+    # Fallback to Standard Session Authentication
     return get_session_user(request)
+
 
 class JWTAuthMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
-        # Overwrite request.user with our unified helper.
-        # SimpleLazyObject ensures the code only runs when request.user is actually accessed.
+        # SimpleLazyObject defers execution until request.user is accessed
         request.user = SimpleLazyObject(lambda: get_user_unified(request))
-        
         return self.get_response(request)
