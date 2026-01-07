@@ -10,7 +10,7 @@ from .views import (
     gov_market_prices,
     market_prices_page,
     profile_page,
-    alerts_page,get_profile,get_alerts,create_alert,get_past_alerts,list_markets,delete_alert,update_alert,get_dashboard_prices,
+    alerts_page,get_profile,get_alerts,create_alert,get_past_alerts,list_markets,delete_alert,update_alert,get_dashboard_prices,get_notifications,mark_notifications_seen,
     PasswordResetRequestView,
     PasswordResetConfirmView
 )
@@ -67,6 +67,8 @@ urlpatterns = [
     path("api/profile/update/", update_profile, name="update_profile"),
     path("api/profile/change-password/", change_password, name="change_password"),
     path("api/profile/delete/", delete_account, name="delete_account"),
+    path("api/notifications/", get_notifications, name="get_notifications"),
+    path("api/notifications/mark-seen/", mark_notifications_seen, name="mark_notifications_seen"),
     path("api/alerts/", get_alerts, name="get_alerts"),
     path("api/alerts/create/", create_alert, name="create_alert"),
     path("api/markets/", list_markets, name="list_markets"),

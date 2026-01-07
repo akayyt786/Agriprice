@@ -229,6 +229,98 @@
                             .catch(err => console.error("Profile sync failed:", err));
 
                         initAvatarMenu();
+                        fetchNotifications();
+                        setInterval(fetchNotifications, 30000);
+                    });
+
+                    async function fetchNotifications(markSeen = false) {
+                        try {
+                            const res = await fetch("/api/notifications/", { credentials: "include" });
+                            const data = await res.json();
+
+                            updateNotifBadge(data.unseen_count || 0);
+                            renderNotifications(data.items || []);
+
+                            if (markSeen && data.unseen_count > 0) {
+                                await markNotificationsSeen();
+                                updateNotifBadge(0);
+                            }
+                        } catch (err) {
+                            console.error("Failed to load notifications", err);
+                        }
+                    }
+
+                    function updateNotifBadge(count) {
+                        const badge = document.getElementById("notif-badge");
+                        if (!badge) return;
+
+                        if (count > 0) {
+                            badge.textContent = count > 9 ? "9+" : count;
+                            badge.classList.remove("hidden");
+                        } else {
+                            badge.classList.add("hidden");
+                        }
+                    }
+
+                    function renderNotifications(items) {
+                        const list = document.getElementById("notif-list");
+                        if (!list) return;
+
+                        if (!items.length) {
+                            list.innerHTML = '<div class="px-4 py-3 text-sm text-[#618961]">No notifications yet.</div>';
+                            return;
+                        }
+
+                        list.innerHTML = items.map(item => {
+                            const statusDot = item.is_seen ? "bg-[#dbe6db]" : "bg-[#2ecc71]";
+                            return `
+                                <div class="px-4 py-3 flex gap-3 items-start hover:bg-[#f3f7f3]">
+                                    <span class="mt-1 inline-block size-2 rounded-full ${statusDot}"></span>
+                                    <div class="flex-1">
+                                        <p class="text-sm text-[#101911] font-semibold">${item.crop} @ ${item.market}</p>
+                                        <p class="text-sm text-[#4b6d4f] leading-snug">${item.message || "Alert triggered"}</p>
+                                        <p class="text-xs text-[#8aa38c] mt-1">${item.created_at}</p>
+                                    </div>
+                                </div>
+                            `;
+                        }).join("");
+                    }
+
+                    async function markNotificationsSeen() {
+                        try {
+                            await fetch("/api/notifications/mark-seen/", {
+                                method: "POST",
+                                credentials: "include"
+                            });
+                        } catch (err) {
+                            console.error("Failed to mark notifications seen", err);
+                        }
+                    }
+
+                    function toggleNotifications() {
+                        const dropdown = document.getElementById("notif-dropdown");
+                        if (!dropdown) return;
+
+                        const isHidden = dropdown.classList.contains("hidden");
+                        dropdown.classList.toggle("hidden");
+
+                        if (isHidden) {
+                            fetchNotifications(true);
+                        }
+                    }
+
+                    function refreshNotifications() {
+                        fetchNotifications();
+                    }
+
+                    document.addEventListener("click", (event) => {
+                        const dropdown = document.getElementById("notif-dropdown");
+                        const btn = document.getElementById("notif-btn");
+                        if (!dropdown || !btn) return;
+
+                        if (!dropdown.classList.contains("hidden") && !dropdown.contains(event.target) && event.target !== btn && !btn.contains(event.target)) {
+                            dropdown.classList.add("hidden");
+                        }
                     });
                     function initAvatarMenu() {
                         const avatarBtn = document.getElementById("avatarBtn");
@@ -293,17 +385,32 @@
                             </div>
                         </div>
                         <div class="flex flex-1 justify-end gap-8">
-                            <button
-                                class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 bg-[#e9f1ea] text-[#101911] gap-2 text-sm font-bold leading-normal tracking-[0.015em] min-w-0 px-2.5">
-                                <div class="text-[#101911]" data-icon="Bell" data-size="20px" data-weight="regular">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20px" height="20px"
-                                        fill="currentColor" viewBox="0 0 256 256">
-                                        <path
-                                            d="M221.8,175.94C216.25,166.38,208,139.33,208,104a80,80,0,1,0-160,0c0,35.34-8.26,62.38-13.81,71.94A16,16,0,0,0,48,200H88.81a40,40,0,0,0,78.38,0H208a16,16,0,0,0,13.8-24.06ZM128,216a24,24,0,0,1-22.62-16h45.24A24,24,0,0,1,128,216ZM48,184c7.7-13.24,16-43.92,16-80a64,64,0,1,1,128,0c0,36.05,8.28,66.73,16,80Z">
-                                        </path>
-                                    </svg>
+                            <div class="relative">
+                                <button id="notif-btn" onclick="toggleNotifications()"
+                                    class="relative flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 bg-[#e9f1ea] text-[#101911] gap-2 text-sm font-bold leading-normal tracking-[0.015em] min-w-0 px-2.5 focus:outline-none focus:ring-2 focus:ring-[#2ecc71]/50">
+                                    <div class="text-[#101911]" data-icon="Bell" data-size="20px" data-weight="regular">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20px" height="20px"
+                                            fill="currentColor" viewBox="0 0 256 256">
+                                            <path
+                                                d="M221.8,175.94C216.25,166.38,208,139.33,208,104a80,80,0,1,0-160,0c0,35.34-8.26,62.38-13.81,71.94A16,16,0,0,0,48,200H88.81a40,40,0,0,0,78.38,0H208a16,16,0,0,0,13.8-24.06ZM128,216a24,24,0,0,1-22.62-16h45.24A24,24,0,0,1,128,216ZM48,184c7.7-13.24,16-43.92,16-80a64,64,0,1,1,128,0c0,36.05,8.28,66.73,16,80Z">
+                                            </path>
+                                        </svg>
+                                    </div>
+                                    <span id="notif-badge"
+                                        class="hidden absolute -top-1 -right-1 min-w-5 px-1 h-5 rounded-full bg-[#e53935] text-white text-[11px] font-bold flex items-center justify-center shadow-md"></span>
+                                </button>
+
+                                <div id="notif-dropdown"
+                                    class="hidden absolute right-0 mt-2 w-80 rounded-xl bg-white/95 backdrop-blur border border-[#e6efe7] shadow-[0_20px_40px_rgba(0,0,0,0.12)] ring-1 ring-[#e6efe7]/60 overflow-hidden z-10">
+                                    <div class="flex items-center justify-between px-4 py-2 border-b border-[#e6efe7]">
+                                        <p class="text-sm font-semibold text-[#101911]">Notifications</p>
+                                        <button onclick="refreshNotifications()" class="text-xs text-[#2ecc71] font-bold">Refresh</button>
+                                    </div>
+                                    <div id="notif-list" class="max-h-80 overflow-y-auto divide-y divide-[#eef4ef]">
+                                        <div class="px-4 py-3 text-sm text-[#618961]">Loading...</div>
+                                    </div>
                                 </div>
-                            </button>
+                            </div>
                             <div class="relative">
                                 <button id="avatarBtn" aria-expanded="false" aria-controls="avatarMenu"
                                     class="bg-center bg-no-repeat bg-cover rounded-full size-10 border border-[#e1e8e2] shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2ecc71]/40"

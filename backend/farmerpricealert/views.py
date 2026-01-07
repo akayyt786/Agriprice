@@ -593,6 +593,66 @@ def process_alert(alert, price_obj, message):
 
     return False
 
+
+@never_cache
+@api_view(["GET"])
+@authentication_classes([CookieJWTAuthentication, SessionAuthentication])
+@permission_classes([IsAuthenticated])
+def get_notifications(request):
+    """Return recent alert notifications and unseen count for the current user."""
+    user = request.user
+
+    unseen_count = AlertHistory.objects.filter(
+        subscription__user=user,
+        is_seen=False
+    ).count()
+
+    recent_alerts = (
+        AlertHistory.objects
+        .filter(subscription__user=user)
+        .select_related("subscription", "price")
+        .order_by("-created_at")[:20]
+    )
+
+    items = []
+    for alert in recent_alerts:
+        sub = alert.subscription
+        price = alert.price
+        items.append({
+            "id": alert.id,
+            "message": alert.message,
+            "crop": sub.crop.name,
+            "market": sub.market.name,
+            "price": str(price.modal_price) if price else None,
+            "created_at": alert.created_at.strftime("%Y-%m-%d %H:%M"),
+            "is_seen": alert.is_seen,
+        })
+
+    return Response({
+        "unseen_count": unseen_count,
+        "items": items
+    })
+
+
+@never_cache
+@csrf_exempt
+@api_view(["POST"])
+@authentication_classes([CookieJWTAuthentication, SessionAuthentication])
+@permission_classes([IsAuthenticated])
+def mark_notifications_seen(request):
+    """Mark all notifications as seen for the current user."""
+    user = request.user
+
+    updated = AlertHistory.objects.filter(
+        subscription__user=user,
+        is_seen=False
+    ).update(is_seen=True)
+
+    return Response({
+        "updated": updated,
+        "unseen_count": 0
+    })
+
 #for deleting alert
 @never_cache
 @api_view(["DELETE"])
