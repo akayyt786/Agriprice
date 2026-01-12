@@ -1,0 +1,7 @@
+DATABASE_URL=postgresql://ummarr:dLlz4eCTurhUrFX4_TnoqA@agripricedb-11710.jxf.gcp-asia-southeast1.cockroachlabs.cloud:26257/defaultdb?sslmode=require
+CLOUDINARY_CLOUD_NAME=duyqfx8tw
+CLOUDINARY_API_KEY=119456793886522
+CLOUDINARY_API_SECRET=y7qduwJSF3IsStPHCRo2J6biEKU
+SECRET_KEY=django-insecure-random-deployment-key-12345
+DEBUG=False
+PYTHON_VERSION=3.11.6
