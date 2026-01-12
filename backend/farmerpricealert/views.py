@@ -278,7 +278,7 @@ def gov_market_prices(request):
     params = {
         "api-key": API_KEY,
         "format": "json",
-        "limit": 1000,
+        "limit": limit,
         "offset": offset
     }
 
