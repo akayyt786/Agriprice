@@ -257,7 +257,7 @@ class CookieLoginView(APIView):
             value=str(access),
             httponly=True,
             secure=is_secure,
-            samesite="Lax" if not is_secure else "None",
+            samesite="Lax",
             path="/"
         )
 
@@ -266,7 +266,7 @@ class CookieLoginView(APIView):
             value=str(refresh),
             httponly=True,
             secure=is_secure,
-            samesite="Lax" if not is_secure else "None",
+            samesite="Lax",
             path="/"
         )
         
