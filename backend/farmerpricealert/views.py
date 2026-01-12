@@ -129,20 +129,42 @@ class RegisterView(CreateAPIView):
 
     @transaction.atomic
     def post(self, request):
+        print("=" * 50)
+        print("REGISTRATION REQUEST RECEIVED")
+        print(f"Request data: {request.data}")
+        print("=" * 50)
+        
         try:
+            print("Step 1: Validating serializer...")
             serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
+            print("Step 1: Serializer valid ✓")
+            
+            print("Step 2: Saving user...")
             user = serializer.save()
+            print(f"Step 2: User created - ID: {user.id}, Username: {user.username}, Email: {user.email}")
+            
+            print("Step 3: Marking user as inactive...")
             user.is_active = False 
             user.save()
+            print("Step 3: User marked inactive ✓")
+            
+            print("Step 4: Generating JWT token...")
             token = jwt.encode(
                 {"user_id": user.id, "exp": datetime.utcnow() + timedelta(hours=24)},
                 settings.SECRET_KEY,
                 algorithm="HS256"
             )
-            # Use SITE_URL from environment or default to localhost for development
+            print(f"Step 4: Token generated ✓")
+            
+            print("Step 5: Building verification link...")
             site_url = os.getenv('SITE_URL', 'http://127.0.0.1:8000')
             verification_link = f"{site_url}/api/verify-email/{token}/"
+            print(f"Step 5: Verification link: {verification_link}")
+            
+            print("Step 6: Sending email...")
+            print(f"From: {settings.DEFAULT_FROM_EMAIL}")
+            print(f"To: {user.email}")
             try:
                 send_mail(
                     subject="Verify your AgriPrice Account",
@@ -151,16 +173,24 @@ class RegisterView(CreateAPIView):
                     recipient_list=[user.email],
                     fail_silently=False,
                 )
+                print("Step 6: Email sent successfully ✓")
             except Exception as e:
-                # If email fails, delete the inactive user so they can try again
+                print(f"Step 6: Email FAILED - {str(e)}")
                 user.delete()
                 return Response({"error": f"Failed to send email: {str(e)}"}, status=500)
             
+            print("SUCCESS: Registration complete!")
+            print("=" * 50)
             return Response(
                 {"message": "User registered successfully", "token": token},
                 status=status.HTTP_201_CREATED
             )
         except Exception as e:
+            print(f"ERROR: Registration failed - {str(e)}")
+            print(f"Error type: {type(e).__name__}")
+            import traceback
+            print(f"Traceback:\n{traceback.format_exc()}")
+            print("=" * 50)
             return Response({"error": f"Registration failed: {str(e)}"}, status=500)
 
 

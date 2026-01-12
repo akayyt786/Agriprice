@@ -30,10 +30,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-# Temporarily set to True for debugging
-DEBUG = os.getenv('DEBUG', 'True') == 'True'
+# Force DEBUG to True temporarily to see errors
+DEBUG = True
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') + ['.onrender.com']
+# Allow all hosts temporarily for debugging
+ALLOWED_HOSTS = ['*']
 
 CSRF_TRUSTED_ORIGINS = ['https://*.onrender.com']
 
