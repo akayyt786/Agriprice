@@ -356,6 +356,20 @@
                 display: none;
             }
         }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .spin-anim {
+            animation: spin 1s linear infinite;
+        }
     </style>
 </head>
 
@@ -403,7 +417,9 @@
                         <input type="password" id="password" placeholder="••••••••" required>
                     </div>
                 </div>
-                <button type="submit" class="register-btn">Create Free Account</button>
+                <button type="submit" id="register-btn" class="register-btn">
+                    <span id="btn-text">Create Free Account</span>
+                </button>
             </form>
             <button type="button" class="google-btn"
                 onclick="window.location.href='http://127.0.0.1:8000/accounts/google/login/';">
@@ -437,6 +453,19 @@
             const fullname = document.getElementById("fullname").value;
             const email = document.getElementById("email").value;
             const password = document.getElementById("password").value;
+            const btn = document.getElementById("register-btn");
+
+            // START LOADING STATE
+            const originalContent = btn.innerHTML;
+            btn.disabled = true;
+            btn.style.opacity = "0.7";
+            btn.style.cursor = "not-allowed";
+            btn.innerHTML = `<div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                <i data-lucide="loader-2" class="spin-anim"></i>
+                                <span>Creating Account...</span>
+                             </div>`;
+            lucide.createIcons();
+
 
             const headers = {
                 "Content-Type": "application/json",
@@ -463,6 +492,12 @@
                     }
                     alert("Registration failed:\n" + (errorDetails || "Unknown error"));
                     console.log(data);
+
+                    // RESTORE BUTTON STATE
+                    btn.disabled = false;
+                    btn.style.opacity = "1";
+                    btn.style.cursor = "pointer";
+                    btn.innerHTML = originalContent;
                     return;
                 }
 
@@ -473,6 +508,12 @@
             } catch (err) {
                 console.error(err);
                 alert("Server error");
+
+                // RESTORE BUTTON STATE
+                btn.disabled = false;
+                btn.style.opacity = "1";
+                btn.style.cursor = "pointer";
+                btn.innerHTML = originalContent;
             }
         });
     </script>

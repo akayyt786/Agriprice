@@ -443,6 +443,20 @@
                 display: none;
             }
         }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .spin-anim {
+            animation: spin 1s linear infinite;
+        }
     </style>
 </head>
 
@@ -494,12 +508,14 @@
                         <i data-lucide="lock" size="20"></i>
                         <input type="password" id="password" placeholder="••••••••" required>
                         <div class="footer-text">
-    <a href="#" onclick="showForgotPasswordModal(); return false;">Forgot password?</a>
-</div>
+                            <a href="#" onclick="showForgotPasswordModal(); return false;">Forgot password?</a>
+                        </div>
                     </div>
                 </div>
 
-                <button type="submit" class="login-btn">Sign In to Dashboard</button>
+                <button type="submit" id="login-btn" class="login-btn">
+                    <span id="btn-text">Sign In to Dashboard</span>
+                </button>
                 <p id="msg" style="margin-top: 10px; font-weight: 600;"></p>
 
             </form>
@@ -518,28 +534,39 @@
     </div>
 
     <!-- Forgot Password Modal -->
-    <div id="forgotPasswordModal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); flex-direction: column; align-items: center; justify-content: center;">
-        <div style="background-color: var(--white); padding: 40px; border-radius: 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-width: 400px; width: 90%; animation: slideUp 0.3s ease;">
+    <div id="forgotPasswordModal"
+        style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); flex-direction: column; align-items: center; justify-content: center;">
+        <div
+            style="background-color: var(--white); padding: 40px; border-radius: 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-width: 400px; width: 90%; animation: slideUp 0.3s ease;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <h3 style="font-size: 20px; font-weight: 700; color: var(--text-dark);">Reset Password</h3>
-                <button onclick="closeForgotPasswordModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-light);">×</button>
+                <button onclick="closeForgotPasswordModal()"
+                    style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-light);">×</button>
             </div>
-            
-            <p style="color: var(--text-light); font-size: 14px; margin-bottom: 20px;">Enter your email address and we'll send you a link to reset your password.</p>
-            
+
+            <p style="color: var(--text-light); font-size: 14px; margin-bottom: 20px;">Enter your email address and
+                we'll send you a link to reset your password.</p>
+
             <form id="forgotPasswordForm" onsubmit="sendPasswordResetEmail(); return false;">
                 <div class="input-group" style="margin-bottom: 15px;">
-                    <label for="resetEmail" style="font-size: 14px; font-weight: 600; color: var(--text-dark); margin-bottom: 8px; display: block;">Email Address</label>
+                    <label for="resetEmail"
+                        style="font-size: 14px; font-weight: 600; color: var(--text-dark); margin-bottom: 8px; display: block;">Email
+                        Address</label>
                     <div class="input-wrapper">
                         <i data-lucide="mail" size="20"></i>
-                        <input type="email" id="resetEmail" placeholder="your@email.com" style="width: 100%; padding: 12px 12px 12px 44px; border: 2px solid #f1f5f9; background: #f8fafc; border-radius: 12px; font-size: 14px; color: var(--text-dark); outline: none;" required>
+                        <input type="email" id="resetEmail" placeholder="your@email.com"
+                            style="width: 100%; padding: 12px 12px 12px 44px; border: 2px solid #f1f5f9; background: #f8fafc; border-radius: 12px; font-size: 14px; color: var(--text-dark); outline: none;"
+                            required>
                     </div>
                 </div>
 
-                <button type="submit" style="width: 100%; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: var(--white); border: none; padding: 12px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; margin-top: 15px;">Send Reset Link</button>
+                <button type="submit"
+                    style="width: 100%; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: var(--white); border: none; padding: 12px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; margin-top: 15px;">Send
+                    Reset Link</button>
             </form>
 
-            <div id="resetMessage" style="margin-top: 15px; text-align: center; font-size: 14px; font-weight: 600;"></div>
+            <div id="resetMessage" style="margin-top: 15px; text-align: center; font-size: 14px; font-weight: 600;">
+            </div>
         </div>
     </div>
 
@@ -577,6 +604,23 @@
         async function loginUser() {
             const username = document.getElementById("email").value;
             const password = document.getElementById("password").value;
+            const btn = document.getElementById("login-btn");
+            const btnText = document.getElementById("btn-text");
+            const msg = document.getElementById("msg");
+
+            // START LOADING STATE
+            const originalContent = btn.innerHTML; // Save original content if needed, though we use spans
+            btn.disabled = true;
+            btn.style.opacity = "0.7";
+            btn.style.cursor = "not-allowed";
+            // Replace content with spinner
+            btn.innerHTML = `<div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                <i data-lucide="loader-2" class="spin-anim"></i>
+                                <span>Signing In...</span>
+                             </div>`;
+            lucide.createIcons(); // Render the new icon
+            msg.innerText = "";
+            msg.style.color = "inherit";
 
             try {
                 const res = await fetch("/api/login-cookie/", {
@@ -592,19 +636,32 @@
                 const data = await res.json();
 
                 if (!res.ok) {
-                    document.getElementById("msg").innerText =
-                        data.detail || "Login failed";
+                    msg.innerText = data.detail || "Login failed";
+                    msg.style.color = "#e53935"; // Red color
+
+                    // RESTORE BUTTON STATE
+                    btn.disabled = false;
+                    btn.style.opacity = "1";
+                    btn.style.cursor = "pointer";
+                    btn.innerHTML = originalContent; // Restore original button text
                     return;
                 }
 
-                document.getElementById("msg").style.color = "green";
-                document.getElementById("msg").innerText =
-                    "Logged in successfully";
+                msg.style.color = "#27ae60"; // Green
+                msg.innerText = "Logged in successfully";
 
+                // Success - Redirect (Button stays disabled to prevent double clicks)
                 window.location.href = "/dashboard/";
             } catch (err) {
                 console.error(err);
-                document.getElementById("msg").innerText = "Network error";
+                msg.innerText = "Network error. Please try again.";
+                msg.style.color = "#e53935";
+
+                // RESTORE BUTTON STATE
+                btn.disabled = false;
+                btn.style.opacity = "1";
+                btn.style.cursor = "pointer";
+                btn.innerHTML = originalContent;
             }
         }
 
@@ -656,7 +713,7 @@
             }
         }
 
-        window.onclick = function(event) {
+        window.onclick = function (event) {
             const modal = document.getElementById("forgotPasswordModal");
             if (event.target === modal) {
                 closeForgotPasswordModal();
