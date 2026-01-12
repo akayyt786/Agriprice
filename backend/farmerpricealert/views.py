@@ -546,7 +546,7 @@ def get_alerts(request):
             current_price_val = "Error checking"
 
         active_data.append({
-            "id": a.id,
+            "id": str(a.id),  # String to preserve large CockroachDB IDs
             "crop": a.crop.name.title(),
             "market": a.market.name.title(),
             "target_min": str(a.target_min),
@@ -566,7 +566,7 @@ def get_alerts(request):
         "active": active_data,
         "history": [
             {
-                "id": h.id,
+                "id": str(h.id),  # String to preserve large CockroachDB IDs
                 "crop": h.subscription.crop.name.title(),
                 "market": h.subscription.market.name.title(),
                 "price_reached": str(h.price.modal_price if h.price else "N/A"),
