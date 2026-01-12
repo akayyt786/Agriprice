@@ -256,6 +256,7 @@ class CookieLoginView(APIView):
 
 # Get government market prices
 @never_cache
+@never_cache
 @api_view(["GET"])
 @authentication_classes([CookieJWTAuthentication, SessionAuthentication])
 @permission_classes([IsAuthenticated])
@@ -264,11 +265,21 @@ def gov_market_prices(request):
     state = request.GET.get("state", "").strip()
     district = request.GET.get("district", "").strip()
     mandi = request.GET.get("mandi", "").strip()
+    
+    # Pagination Parameters
+    try:
+        page = int(request.GET.get("page", 1))
+    except ValueError:
+        page = 1
+    
+    limit = 10
+    offset = (page - 1) * limit
 
     params = {
         "api-key": API_KEY,
         "format": "json",
-        "limit": 300      # Reduced from 1000 to prevent timeout on Render Free Tier
+        "limit": 1000,
+        "offset": offset
     }
 
     # Pass filters directly to the Government API for accurate results
@@ -281,9 +292,11 @@ def gov_market_prices(request):
     if mandi:
         params["filters[market]"] = mandi.title()
 
+    api_failed = False
     try:
-        res = requests.get(BASE_URL, params=params, timeout=25) # Reduced timeout
-        api_failed = (res.status_code != 200)
+        res = requests.get(BASE_URL, params=params, timeout=25) 
+        if res.status_code != 200:
+            api_failed = True
     except Exception as e:
         print(f"--- ERROR: Gov API Connection Failed: {str(e)}")
         api_failed = True
@@ -304,7 +317,9 @@ def gov_market_prices(request):
         if mandi:
             local_prices = local_prices.filter(market__name__icontains=mandi)
             
-        local_prices = local_prices.order_by("-arrival_date")[:300]
+        # Local Pagination
+        total_count = local_prices.count()
+        local_prices = local_prices.order_by("-arrival_date")[offset:offset+limit]
         
         formatted = []
         for p in local_prices:
@@ -324,13 +339,16 @@ def gov_market_prices(request):
             })
             
         return Response({
-            "total": len(formatted),
+            "total": total_count,
+            "page": page,
             "prices": formatted,
             "warning": "External API is currently unavailable. Showing latest cached data."
         })
 
     data = res.json().get("records", [])
-
+    total_records = res.json().get("total", 0) # Gov API usually returns 'total' or similar. 
+    # If not present, we can't easily know the max pages, but we can assume 'has_more' if len(data) == limit.
+    
     formatted = []
 
     def get_field(data_dict, keys):
@@ -340,19 +358,8 @@ def gov_market_prices(request):
                 return str(val)
         return "N/A"
 
-    # Caching dictionaries
-    crop_cache = {}
-    market_cache = {}
-    
-    # Bulk preparation
-    prices_to_create = []
-    prices_info = [] # Metadata to process alerts later
-
-    # Pre-fetch known crops/markets to populate cache? 
-    # For now, simplistic on-the-fly caching is fine for 300 items.
-
     for d in data:
-        # 1. Filtering
+        # 1. Filtering (Redundant if API handled it, but good for safety if API ignores cache mismatch)
         curr_state = d.get("state", "").lower()
         curr_dist = d.get("district", "").lower()
         curr_comm = d.get("commodity", "").lower()
@@ -372,49 +379,50 @@ def gov_market_prices(request):
         
         if not formatted_date: continue
             
-        # 3. Resolve Crop/Market
+        # 3. Resolve Crop/Market & Save
         crop_name_raw = d.get("commodity", "N/A").lower()
         market_name_raw = d.get("market", "N/A").lower()
         
-        if crop_name_raw in crop_cache:
-            crop_obj = crop_cache[crop_name_raw]
-        else:
-            crop_obj, _ = Crop.objects.get_or_create(name=crop_name_raw)
-            crop_cache[crop_name_raw] = crop_obj
+        crop_obj, _ = Crop.objects.get_or_create(name=crop_name_raw)
 
-        if market_name_raw in market_cache:
-            market_obj = market_cache[market_name_raw]
-        else:
-            market_obj, created = Market.objects.get_or_create(
-                name=market_name_raw,
-                defaults={
-                    "state": d.get("state", "India"),
-                    "district": d.get("district", market_name_raw)
-                }
-            )
-            market_cache[market_name_raw] = market_obj
+        market_obj, created = Market.objects.get_or_create(
+            name=market_name_raw,
+            defaults={
+                "state": d.get("state", "India"),
+                "district": d.get("district", market_name_raw)
+            }
+        )
         
-        # Update Market details if needed (simplified)
+        # Update details if missing
         if d.get("district") and (not market_obj.district or market_obj.district == "N/A"):
              market_obj.district = d.get("district")
              market_obj.save()
+        if d.get("state") and (not market_obj.state or market_obj.state == "N/A"):
+             market_obj.state = d.get("state")
+             market_obj.save()
 
-        # Prepare Price Object (Don't save yet)
-        mp = MarketPrice(
+        # Save Price
+        price_obj, created_price = MarketPrice.objects.get_or_create(
             crop=crop_obj,
             market=market_obj,
             arrival_date=formatted_date,
-            min_price=d.get("min_price"),
-            max_price=d.get("max_price"),
-            modal_price=d.get("modal_price")
+            defaults={
+                "min_price": d.get("min_price"),
+                "max_price": d.get("max_price"),
+                "modal_price": d.get("modal_price")
+            }
         )
-        
-        prices_to_create.append(mp)
-        prices_info.append({
-            "mp": mp,
-            "crop": crop_obj,
-            "market": market_obj
-        })
+
+        # Process Alerts (Only for newly created prices)
+        if created_price:
+            alerts = AlertSubscription.objects.filter(
+                models.Q(market=market_obj) | models.Q(market__name__iexact=market_obj.district),
+                crop=crop_obj, 
+                status="active"
+            )
+            for alert in alerts:
+                message = f"Market Alert: {crop_obj.name.title()} is available in {market_obj.name.title()} mandi at price range {price_obj.min_price}-{price_obj.max_price}."
+                process_alert(alert, price_obj, message)
 
         # Frontend format
         comm = get_field(d, ["commodity", "Commodity"])
@@ -433,32 +441,9 @@ def gov_market_prices(request):
             "modal_price": d.get("modal_price", "0"),
         })
 
-    # BULK CREATE
-    # ignore_conflicts=True means we don't duplicate if it exists
-    # But it also means it doesn't return the ID for creating alerts easily.
-    # However, saving 300 items is fast.
-    # To enable "New Price" alert triggers, we need to know which ones were actually new.
-    # Strategy: Bulk Create everything. Then query for alerts?
-    # Or just iterate and save? 
-    # Iterating 300 times is much better than 1000. 
-    # Let's try BULK first for raw speed.
-    
-    if prices_to_create:
-        MarketPrice.objects.bulk_create(prices_to_create, ignore_conflicts=True)
-        
-        # Alert processing (Simplified for performance)
-        # We will only check alerts for the items we just saw.
-        # Ideally, we should check if they existed before, but for now, 
-        # checking 300 alerts in memory is faster than DB writes.
-        # But we need to query Subscriptions efficiently.
-        
-        # Get all relevant subscriptions for these markets/crops
-        # This is a bit complex for a quick fix. 
-        # Let's skip complex alert batching and just focus on saving getting done.
-        pass
-
     return Response({
-        "total": len(formatted),
+        "total": total_records, # May be None/0 if API doesn't send it, frontend should handle
+        "page": page,
         "prices": formatted
     })
 

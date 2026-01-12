@@ -26,7 +26,8 @@
             <header
                 class="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#f1f4f1] px-10 py-3">
                 <div class="flex items-center gap-4 text-[#121713]">
-                    <div style="background: #2ecc71; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 8px; box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);">
+                    <div
+                        style="background: #2ecc71; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 8px; box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);">
                         <i data-lucide="leaf" color="white" size="24" style="margin: 0;"></i>
                     </div>
                     <h2 class="text-[#121713] text-lg font-bold leading-tight tracking-[-0.015em]">Agriprice</h2>
@@ -67,7 +68,8 @@
                             class="hidden absolute right-0 mt-2 w-80 rounded-xl bg-white/95 backdrop-blur border border-[#dce5dd] shadow-[0_20px_40px_rgba(0,0,0,0.12)] ring-1 ring-[#dce5dd]/60 overflow-hidden z-10">
                             <div class="flex items-center justify-between px-4 py-2 border-b border-[#dce5dd]">
                                 <p class="text-sm font-semibold text-[#121713]">Notifications</p>
-                                <button onclick="refreshNotifications()" class="text-xs text-[#2ecc71] font-bold">Refresh</button>
+                                <button onclick="refreshNotifications()"
+                                    class="text-xs text-[#2ecc71] font-bold">Refresh</button>
                             </div>
                             <div id="notif-list" class="max-h-80 overflow-y-auto divide-y divide-[#eef4ef]">
                                 <div class="px-4 py-3 text-sm text-[#68826b]">Loading...</div>
@@ -167,6 +169,18 @@
                         <div class="flex flex-col gap-2" id="market-list">
                         </div>
 
+                        <div class="flex justify-center items-center gap-4 mt-6 mb-10">
+                            <button id="prevBtn" onclick="changePage(-1)"
+                                class="rounded-lg bg-[#e0e5e0] px-4 py-2 text-sm font-bold text-[#121713] disabled:opacity-50 disabled:cursor-not-allowed">
+                                Previous
+                            </button>
+                            <span id="pageIndicator" class="text-sm font-semibold text-[#121713]">Page 1</span>
+                            <button id="nextBtn" onclick="changePage(1)"
+                                class="rounded-lg bg-[#1c5e21] px-4 py-2 text-sm font-bold text-white hover:bg-[#144718] disabled:opacity-50 disabled:cursor-not-allowed">
+                                Next
+                            </button>
+                        </div>
+
                     </div>
                 </div>
             </div>
@@ -174,6 +188,8 @@
     </div>
 
     <script>
+        let CURRENT_PAGE = 1;
+
         // Add this anywhere inside your <script> tag
         document.addEventListener("DOMContentLoaded", () => {
             fetch("/api/profile/me/", { credentials: "include" })
@@ -227,50 +243,49 @@
             });
         }
 
-        async function loadMarketPrices() {
+        async function loadMarketPrices(page = 1) {
+            CURRENT_PAGE = page;
             const container = document.getElementById("market-list");
-            container.innerHTML = "Loading…";
+            container.innerHTML = "Loading...";
+
+            // Update buttons state
+            document.getElementById("prevBtn").disabled = (page <= 1);
+            document.getElementById("pageIndicator").textContent = `Page ${page}`;
 
             try {
-                const res = await fetch(API_BASE_URL, {
-                    credentials: "include"
-                });
+                // Determine if we are filtering or just loading defaults
+                const crop = document.getElementById("filter-crop").value.trim();
+                const state = document.getElementById("filter-state").value.trim();
+                const district = document.getElementById("filter-district").value.trim();
+                const mandi = document.getElementById("filter-mandi").value.trim();
+
+                const url = new URL(API_BASE_URL, window.location.origin);
+                url.searchParams.append('page', page);
+                if (crop) url.searchParams.append('crop', crop);
+                if (state) url.searchParams.append('state', state);
+                if (district) url.searchParams.append('district', district);
+                if (mandi) url.searchParams.append('mandi', mandi);
+                url.searchParams.append('_t', Date.now());
+
+                const res = await fetch(url, { credentials: "include" });
                 const data = await res.json();
                 renderData(data.prices || []);
+
             } catch (err) {
                 console.error(err);
                 container.innerHTML = "Failed to load market prices.";
             }
         }
 
+        function changePage(delta) {
+            const newPage = CURRENT_PAGE + delta;
+            if (newPage < 1) return;
+            loadMarketPrices(newPage);
+        }
+
         function applyFilters() {
-            const crop = document.getElementById("filter-crop").value.trim();
-            const state = document.getElementById("filter-state").value.trim();
-            const district = document.getElementById("filter-district").value.trim();
-            const mandi = document.getElementById("filter-mandi").value.trim();
-
-            const url = new URL(API_BASE_URL, window.location.origin);
-            if (crop) url.searchParams.append('crop', crop);
-            if (state) url.searchParams.append('state', state);
-            if (district) url.searchParams.append('district', district);
-            if (mandi) url.searchParams.append('mandi', mandi);
-            url.searchParams.append('_t', Date.now()); // Cache buster
-
-            const container = document.getElementById("market-list");
-            container.innerHTML = "Filtering...";
-
-            console.log("Fetching from:", url.toString());
-
-            fetch(url, { credentials: "include" })
-                .then(res => res.json())
-                .then(data => {
-                    console.log("Filter Result:", data);
-                    renderData(data.prices || []);
-                })
-                .catch(err => {
-                    console.error(err);
-                    container.innerHTML = "Error filtering data.";
-                });
+            CURRENT_PAGE = 1; // Reset to page 1 on filter
+            loadMarketPrices(1);
         }
 
         function renderData(prices) {
