@@ -494,25 +494,30 @@ def get_alerts(request):
         if a.status != 'active':
             continue
 
-        # Try to find the latest price for this specific market and crop
-        latest_price_obj = MarketPrice.objects.filter(
-            models.Q(market=a.market) | models.Q(market__name__iexact=a.market.name),
-            crop__name__iexact=a.crop.name
-        ).order_by("-arrival_date").first()
-        
-        current_price_val = None
-        if latest_price_obj:
-            p_min = round_price(latest_price_obj.min_price)
-            p_max = round_price(latest_price_obj.max_price)
-            current_price_val = f"{p_min} - {p_max}"
-
-            # CHECK TRIGGER CONDITION
-            message = f"Market Alert: {a.crop.name.title()} is available in {a.market.name.title()} mandi at price range {p_min}-{p_max}."
-            is_triggered = process_alert(a, latest_price_obj, message)
+        try:
+            # Try to find the latest price for this specific market and crop
+            latest_price_obj = MarketPrice.objects.filter(
+                models.Q(market=a.market) | models.Q(market__name__iexact=a.market.name),
+                crop__name__iexact=a.crop.name
+            ).order_by("-arrival_date").first()
             
-            if is_triggered:
-                # If triggered, it's no longer active, so don't add to active_data
-                continue
+            current_price_val = None
+            if latest_price_obj:
+                p_min = round_price(latest_price_obj.min_price)
+                p_max = round_price(latest_price_obj.max_price)
+                current_price_val = f"{p_min} - {p_max}"
+
+                # CHECK TRIGGER CONDITION
+                message = f"Market Alert: {a.crop.name.title()} is available in {a.market.name.title()} mandi at price range {p_min}-{p_max}."
+                is_triggered = process_alert(a, latest_price_obj, message)
+                
+                if is_triggered:
+                    # If triggered, it's no longer active, so don't add to active_data
+                    continue
+        except Exception as e:
+            print(f"Error processing alert {a.id}: {e}")
+            # Ensure it's still added to active/list so user can see it even if check failed
+            current_price_val = "Error checking"
 
         active_data.append({
             "id": a.id,

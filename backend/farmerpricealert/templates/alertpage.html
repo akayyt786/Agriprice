@@ -19,7 +19,8 @@
             <header
                 class="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#f0f4f0] px-10 py-3">
                 <div class="flex items-center gap-4 text-[#111811]">
-                    <div style="background: #2ecc71; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 8px; box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);">
+                    <div
+                        style="background: #2ecc71; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 8px; box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);">
                         <i data-lucide="leaf" color="white" size="24" style="margin: 0;"></i>
                     </div>
                     <h2 class="text-[#111811] text-lg font-bold leading-tight tracking-[-0.015em]">Agriprice</h2>
@@ -51,7 +52,8 @@
                             class="hidden absolute right-0 mt-2 w-80 rounded-xl bg-white/95 backdrop-blur border border-[#dbe6db] shadow-[0_20px_40px_rgba(0,0,0,0.12)] ring-1 ring-[#dbe6db]/60 overflow-hidden z-10">
                             <div class="flex items-center justify-between px-4 py-2 border-b border-[#dbe6db]">
                                 <p class="text-sm font-semibold text-[#111811]">Notifications</p>
-                                <button onclick="refreshNotifications()" class="text-xs text-[#2ecc71] font-bold">Refresh</button>
+                                <button onclick="refreshNotifications()"
+                                    class="text-xs text-[#2ecc71] font-bold">Refresh</button>
                             </div>
                             <div id="notif-list" class="max-h-80 overflow-y-auto divide-y divide-[#eef4ef]">
                                 <div class="px-4 py-3 text-sm text-[#618961]">Loading...</div>
@@ -321,7 +323,7 @@
 
             initAvatarMenu();
 
-            fetch("/api/alerts/", {
+            fetch(`/api/alerts/?_t=${Date.now()}`, {
                 credentials: "include"
             })
                 .then(res => res.json())
