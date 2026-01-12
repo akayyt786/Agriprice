@@ -129,36 +129,39 @@ class RegisterView(CreateAPIView):
 
     @transaction.atomic
     def post(self, request):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.save()
-        user.is_active = False 
-        user.save()
-        token = jwt.encode(
-            {"user_id": user.id, "exp": datetime.utcnow() + timedelta(hours=24)},
-            settings.SECRET_KEY,
-            algorithm="HS256"
-        )
-        # Use SITE_URL from environment or default to localhost for development
-        site_url = os.getenv('SITE_URL', 'http://127.0.0.1:8000')
-        verification_link = f"{site_url}/api/verify-email/{token}/"
         try:
-            send_mail(
-                subject="Verify your AgriPrice Account",
-                message=f"Hi {user.username},\n\nPlease verify your account by clicking the link below:\n\n{verification_link}\n\nThis link expires in 24 hours.",
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[user.email],
-                fail_silently=False,
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            user = serializer.save()
+            user.is_active = False 
+            user.save()
+            token = jwt.encode(
+                {"user_id": user.id, "exp": datetime.utcnow() + timedelta(hours=24)},
+                settings.SECRET_KEY,
+                algorithm="HS256"
+            )
+            # Use SITE_URL from environment or default to localhost for development
+            site_url = os.getenv('SITE_URL', 'http://127.0.0.1:8000')
+            verification_link = f"{site_url}/api/verify-email/{token}/"
+            try:
+                send_mail(
+                    subject="Verify your AgriPrice Account",
+                    message=f"Hi {user.username},\n\nPlease verify your account by clicking the link below:\n\n{verification_link}\n\nThis link expires in 24 hours.",
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[user.email],
+                    fail_silently=False,
+                )
+            except Exception as e:
+                # If email fails, delete the inactive user so they can try again
+                user.delete()
+                return Response({"error": f"Failed to send email: {str(e)}"}, status=500)
+            
+            return Response(
+                {"message": "User registered successfully", "token": token},
+                status=status.HTTP_201_CREATED
             )
         except Exception as e:
-            # If email fails, delete the inactive user so they can try again
-            user.delete()
-            return Response({"error": "Failed to send email. Please check your address."}, status=500)
-        
-        return Response(
-            {"message": "User registered successfully", "token": token},
-            status=status.HTTP_201_CREATED
-        )
+            return Response({"error": f"Registration failed: {str(e)}"}, status=500)
 
 
 from rest_framework.decorators import api_view, permission_classes, authentication_classes # <--- Import this
