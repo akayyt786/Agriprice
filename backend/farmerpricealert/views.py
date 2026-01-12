@@ -7,6 +7,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.urls import reverse
 import jwt
+import os
 from django.shortcuts import redirect
 from django.contrib.auth import get_user_model
 from django.shortcuts import redirect, render
@@ -97,6 +98,17 @@ def profile_page(request):
 
 
 
+def round_price(val):
+    """Helper to round price to 2 decimal places safely."""
+    try:
+        return round(float(val), 2)
+    except (ValueError, TypeError):
+        return 0.0
+
+@never_cache
+@_require_login
+def alerts_page(request):
+    return render(request, "alertpage.html")
 
 
 def round_price(value):
@@ -127,7 +139,9 @@ class RegisterView(CreateAPIView):
             settings.SECRET_KEY,
             algorithm="HS256"
         )
-        verification_link = f"http://127.0.0.1:8000/api/verify-email/{token}/"
+        # Use SITE_URL from environment or default to localhost for development
+        site_url = os.getenv('SITE_URL', 'http://127.0.0.1:8000')
+        verification_link = f"{site_url}/api/verify-email/{token}/"
         try:
             send_mail(
                 subject="Verify your AgriPrice Account",
@@ -233,13 +247,14 @@ class CookieLoginView(APIView):
 
         # 5. SET COOKIES
         response = JsonResponse({"message": "Login successful"})
+        is_secure = not settings.DEBUG  # True in production (HTTPS)
         
         response.set_cookie(
             "access",
             value=str(access),
             httponly=True,
-            secure=False,  # Set to True if using HTTPS
-            samesite="Lax",
+            secure=is_secure,
+            samesite="Lax" if not is_secure else "None",
             path="/"
         )
 
@@ -247,8 +262,8 @@ class CookieLoginView(APIView):
             "refresh",
             value=str(refresh),
             httponly=True,
-            secure=False,
-            samesite="Lax",
+            secure=is_secure,
+            samesite="Lax" if not is_secure else "None",
             path="/"
         )
         
@@ -415,9 +430,10 @@ def gov_market_prices(request):
 
         # Process Alerts (Only for newly created prices)
         if created_price:
+            # Find alerts matching this crop (case-insensitive) and market
             alerts = AlertSubscription.objects.filter(
-                models.Q(market=market_obj) | models.Q(market__name__iexact=market_obj.district),
-                crop=crop_obj, 
+                models.Q(market=market_obj) | models.Q(market__name__iexact=market_obj.name),
+                crop__name__iexact=crop_obj.name, 
                 status="active"
             )
             for alert in alerts:
@@ -460,14 +476,14 @@ def get_past_alerts(request):
 
     history = AlertHistory.objects.filter(
         subscription__user=user
-    ).order_by("-created_at")
+    ).select_related("subscription", "subscription__crop", "subscription__market").order_by("-created_at")
 
     data = []
 
     for h in history:
         data.append({
-            "crop": h.subscription.crop.name,
-            "market": h.subscription.market.name,
+            "crop": h.subscription.crop.name.title(),
+            "market": h.subscription.market.name.title(),
             "target_min": str(h.subscription.target_min),
             "target_max": str(h.subscription.target_max),
             "triggered_at": h.created_at.strftime("%Y-%m-%d %H:%M"),
@@ -482,10 +498,10 @@ def get_past_alerts(request):
 def get_alerts(request):
     user = request.user
 
-    # 1. Fetch all subscriptions (we'll filter active ones later after processing)
+    # 1. Fetch all subscriptions for this user (including triggered ones for reprocessing)
     all_alerts = AlertSubscription.objects.filter(
         user=user
-    ).order_by("-created_at")
+    ).select_related('crop', 'market').order_by("-created_at")
 
     active_data = []
 
@@ -494,14 +510,22 @@ def get_alerts(request):
         if a.status != 'active':
             continue
 
+        current_price_val = None
         try:
             # Try to find the latest price for this specific market and crop
+            # Use case-insensitive matching for crop name and check both market ID and name
             latest_price_obj = MarketPrice.objects.filter(
-                models.Q(market=a.market) | models.Q(market__name__iexact=a.market.name),
-                crop__name__iexact=a.crop.name
+                crop__name__iexact=a.crop.name,
+                market=a.market
             ).order_by("-arrival_date").first()
             
-            current_price_val = None
+            # If no exact market match, try by market name (case-insensitive)
+            if not latest_price_obj:
+                latest_price_obj = MarketPrice.objects.filter(
+                    crop__name__iexact=a.crop.name,
+                    market__name__iexact=a.market.name
+                ).order_by("-arrival_date").first()
+            
             if latest_price_obj:
                 p_min = round_price(latest_price_obj.min_price)
                 p_max = round_price(latest_price_obj.max_price)
@@ -514,6 +538,8 @@ def get_alerts(request):
                 if is_triggered:
                     # If triggered, it's no longer active, so don't add to active_data
                     continue
+            else:
+                current_price_val = "No data yet"
         except Exception as e:
             print(f"Error processing alert {a.id}: {e}")
             # Ensure it's still added to active/list so user can see it even if check failed
@@ -521,8 +547,8 @@ def get_alerts(request):
 
         active_data.append({
             "id": a.id,
-            "crop": a.crop.name,
-            "market": a.market.name,
+            "crop": a.crop.name.title(),
+            "market": a.market.name.title(),
             "target_min": str(a.target_min),
             "target_max": str(a.target_max),
             "status": a.status,
@@ -533,7 +559,7 @@ def get_alerts(request):
     # 3. Fetch history of triggered alerts (now including the ones we just triggered)
     past_alerts = AlertHistory.objects.filter(
         subscription__user=user
-    ).select_related("price", "subscription").order_by("-created_at")
+    ).select_related("price", "subscription", "subscription__crop", "subscription__market").order_by("-created_at")
 
     # 4. Return the response
     return Response({
@@ -541,8 +567,8 @@ def get_alerts(request):
         "history": [
             {
                 "id": h.id,
-                "crop": h.subscription.crop.name,
-                "market": h.subscription.market.name,
+                "crop": h.subscription.crop.name.title(),
+                "market": h.subscription.market.name.title(),
                 "price_reached": str(h.price.modal_price if h.price else "N/A"),
                 "status": "triggered",
                 "date": h.created_at.strftime("%Y-%m-%d %H:%M")
@@ -726,7 +752,9 @@ def create_alert(request):
     if not crop_name or not market_id or not min_price or not max_price:
         return Response({"error": "All fields are required"}, status=400)
 
-    crop_obj, _ = Crop.objects.get_or_create(name=crop_name)
+    # Normalize crop name to lowercase to match how gov API stores crops
+    crop_name_normalized = crop_name.strip().lower()
+    crop_obj, _ = Crop.objects.get_or_create(name=crop_name_normalized)
 
     market_obj = Market.objects.filter(id=market_id).first()
 

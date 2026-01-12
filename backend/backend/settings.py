@@ -32,7 +32,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') + ['.onrender.com']
 
 CSRF_TRUSTED_ORIGINS = ['https://*.onrender.com']
 
@@ -156,8 +156,10 @@ MIDDLEWARE = [
 #CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
-    "http://127.0.0.1:5500"
-]
+    "http://127.0.0.1:5500",
+    "http://127.0.0.1:8000",
+    "http://localhost:8000",
+] + ([os.getenv('FRONTEND_URL')] if os.getenv('FRONTEND_URL') else [])
 
 ROOT_URLCONF = 'backend.urls'
 
