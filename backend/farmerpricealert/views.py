@@ -340,6 +340,10 @@ def gov_market_prices(request):
                 return str(val)
         return "N/A"
 
+    # Caching dictionaries to prevent repeated DB lookups in this request
+    crop_cache = {}
+    market_cache = {}
+
     for d in data:
         # 1. Robust Local Filtering (Case-Insensitive)
         # We check this FIRST to avoid unnecessary DB work or processing
@@ -368,19 +372,38 @@ def gov_market_prices(request):
 
         if not formatted_date:
             continue
+            
         crop_name_raw = d.get("commodity", "N/A").lower()
         market_name_raw = d.get("market", "N/A").lower()
-        crop_obj, _ = Crop.objects.get_or_create(name=crop_name_raw)
+        
+        # Optimization: Use cache for Crop
+        if crop_name_raw in crop_cache:
+            crop_obj = crop_cache[crop_name_raw]
+        else:
+            crop_obj, _ = Crop.objects.get_or_create(name=crop_name_raw)
+            crop_cache[crop_name_raw] = crop_obj
 
-        market_obj, created = Market.objects.get_or_create(
-            name=market_name_raw,
-            defaults={
-                "state": d.get("state", "India"),
-                "district": d.get("district", market_name_raw)
-            }
-        )
+        # Optimization: Use cache for Market
+        if market_name_raw in market_cache:
+            market_obj = market_cache[market_name_raw]
+        else:
+            market_obj, created = Market.objects.get_or_create(
+                name=market_name_raw,
+                defaults={
+                    "state": d.get("state", "India"),
+                    "district": d.get("district", market_name_raw)
+                }
+            )
+            # Only update if it's new or was grabbed from cache (logic handled below)
+            # Actually, if we just got it, we can cache it.
+            # But we might need to update district/state even if cached?
+            # For performance, let's assume if cached, it's fine. 
+            # If fetched from DB, we key it.
+            market_cache[market_name_raw] = market_obj
         
         # 🔥 CRITICAL: Update existing Market if district/state is missing or "N/A"
+        # We only do this if we haven't just created it with good defaults, or if we want to improve data.
+        # To save time, only check this if the object in memory seems lacking.
         dist_raw = d.get("district")
         state_raw = d.get("state")
         
@@ -394,8 +417,9 @@ def gov_market_prices(request):
             
         if needs_save:
             market_obj.save()
+            market_cache[market_name_raw] = market_obj # Update cache
 
-        price_obj, _ = MarketPrice.objects.get_or_create(
+        price_obj, created_price = MarketPrice.objects.get_or_create(
             crop=crop_obj,
             market=market_obj,
             arrival_date=formatted_date,
@@ -406,16 +430,17 @@ def gov_market_prices(request):
             }
         )
 
-        # Process Alerts
-        # Find alerts that match this specific Mandi OR match the District name of this Mandi
-        alerts = AlertSubscription.objects.filter(
-            models.Q(market=market_obj) | models.Q(market__name__iexact=market_obj.district),
-            crop=crop_obj, 
-            status="active"
-        )
-        for alert in alerts:
-            message = f"Market Alert: {crop_obj.name.title()} is available in {market_obj.name.title()} mandi at price range {price_obj.min_price}-{price_obj.max_price}."
-            process_alert(alert, price_obj, message)
+        # Process Alerts ONLY if this price record is NEW
+        if created_price:
+            # Find alerts that match this specific Mandi OR match the District name of this Mandi
+            alerts = AlertSubscription.objects.filter(
+                models.Q(market=market_obj) | models.Q(market__name__iexact=market_obj.district),
+                crop=crop_obj, 
+                status="active"
+            )
+            for alert in alerts:
+                message = f"Market Alert: {crop_obj.name.title()} is available in {market_obj.name.title()} mandi at price range {price_obj.min_price}-{price_obj.max_price}."
+                process_alert(alert, price_obj, message)
 
         # 3. Format result for Frontend
         comm = get_field(d, ["commodity", "Commodity"])
