@@ -710,16 +710,23 @@ def delete_alert(request, alert_id):
 
 
 #for updating alert
+@never_cache
 @api_view(["PUT"])
 @authentication_classes([CookieJWTAuthentication, SessionAuthentication])
 @permission_classes([IsAuthenticated])
 def update_alert(request, alert_id):
     user = request.user
 
+    # Convert alert_id to proper type for CockroachDB
+    try:
+        alert_id = int(alert_id)
+    except (ValueError, TypeError):
+        return Response({"error": f"Invalid alert ID format: {alert_id}"}, status=400)
+
     alert = AlertSubscription.objects.filter(id=alert_id, user=user).first()
 
     if not alert:
-        return Response({"error": "Alert not found"}, status=404)
+        return Response({"error": f"Alert not found (ID: {alert_id})"}, status=404)
 
     min_price = request.data.get("min_price")
     max_price = request.data.get("max_price")

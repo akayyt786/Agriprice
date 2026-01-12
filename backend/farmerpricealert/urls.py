@@ -73,8 +73,8 @@ urlpatterns = [
     path("api/alerts/create/", create_alert, name="create_alert"),
     path("api/markets/", list_markets, name="list_markets"),
     path("api/alerts/past/", get_past_alerts, name="past-alerts"),
-    path("api/alerts/<int:alert_id>/delete/", delete_alert, name="delete_alert"),
-    path("api/alerts/<int:alert_id>/update/", update_alert, name="update_alert"),
+    path("api/alerts/<str:alert_id>/delete/", delete_alert, name="delete_alert"),
+    path("api/alerts/<str:alert_id>/update/", update_alert, name="update_alert"),
     path("api/verify-email/<str:token>/", verify_email, name="verify_email"),
 
     # ⭐ THIS ONE RETURNS JSON (DATA)
