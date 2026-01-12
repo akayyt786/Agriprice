@@ -756,10 +756,18 @@ def create_alert(request):
     crop_name_normalized = crop_name.strip().lower()
     crop_obj, _ = Crop.objects.get_or_create(name=crop_name_normalized)
 
+    # Convert market_id to integer if it's a string
+    try:
+        market_id = int(market_id)
+    except (ValueError, TypeError):
+        return Response({"error": f"Invalid market ID format: {market_id}"}, status=400)
+
     market_obj = Market.objects.filter(id=market_id).first()
 
     if not market_obj:
-        return Response({"error": "Invalid market selected"}, status=400)
+        # Debug: Return available market count
+        market_count = Market.objects.count()
+        return Response({"error": f"Invalid market selected (ID: {market_id}). Total markets in DB: {market_count}"}, status=400)
 
     alert = AlertSubscription.objects.create(
         user=user,
