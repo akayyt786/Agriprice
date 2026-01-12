@@ -196,7 +196,7 @@ def list_markets(request):
 
     return Response([
         {
-            "id": m.id,
+            "id": str(m.id),  # Return as string to preserve precision for large CockroachDB IDs
             "name": m.name.title(),
             "district": m.district,
             "state": m.state

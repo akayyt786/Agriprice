@@ -251,9 +251,12 @@
 
         function loadMarkets() {
             fetch("/api/markets/", { credentials: "include" })
-                .then(res => res.json())
-                .then(list => {
-                    markets = list;
+                .then(res => res.text())
+                .then(text => {
+                    // Parse with BigInt-safe handling for large CockroachDB IDs
+                    // Convert large numeric IDs to strings to preserve precision
+                    const safeText = text.replace(/"id":\s*(\d{15,})/g, '"id":"$1"');
+                    markets = JSON.parse(safeText);
                 });
         }
 
@@ -283,7 +286,8 @@
 
                     li.onclick = () => {
                         searchInput.value = m.name;
-                        selectedMarketId = m.id;
+                        // Store as string to preserve large CockroachDB IDs
+                        selectedMarketId = String(m.id);
                         listBox.classList.add("hidden");
                     };
 
