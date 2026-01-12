@@ -1,4 +1,5 @@
 {% load static %}
+{% load socialaccount %}
 <!DOCTYPE html>
 <html lang="en">
 
@@ -422,7 +423,7 @@
                 </button>
             </form>
             <button type="button" class="google-btn"
-                onclick="window.location.href='http://127.0.0.1:8000/accounts/google/login/';">
+                onclick="window.location.href='{% provider_login_url 'google' %}';">
                 <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" alt="Google">
                 Sign up with Google
             </button>

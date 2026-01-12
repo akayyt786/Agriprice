@@ -5,3 +5,5 @@ CLOUDINARY_API_SECRET=y7qduwJSF3IsStPHCRo2J6biEKU
 SECRET_KEY=django-insecure-random-deployment-key-12345
 DEBUG=False
 PYTHON_VERSION=3.11.6
+EMAIL_HOST_USER=amazonminiwala@gmail.com
+EMAIL_HOST_PASSWORD=gyhepzihbxwyeisd
