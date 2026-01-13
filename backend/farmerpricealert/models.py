@@ -7,6 +7,7 @@ from django.db import models
 #  USER (AUTH)
 # ==========================
 class User(AbstractUser):
+    email = models.EmailField(unique=True, blank=False)
     role = models.CharField(
         max_length=20,
         default="farmer"
