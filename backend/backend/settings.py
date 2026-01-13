@@ -184,12 +184,20 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
 if os.getenv('DATABASE_URL'):
-    DATABASES = {
-        'default': dj_database_url.config(
-            default=os.getenv('DATABASE_URL'),
-            engine='django_cockroachdb'
-        )
+    db_config = dj_database_url.config(
+        default=os.getenv('DATABASE_URL'),
+        engine='django_cockroachdb'
+    )
+    # Add CockroachDB-specific settings for production
+    db_config['OPTIONS'] = {
+        'sslmode': 'require',
+        'connect_timeout': 10,
+        'options': '-c statement_timeout=30000'
     }
+    db_config['CONN_MAX_AGE'] = 600  # Connection pooling - keep connections alive
+    db_config['ATOMIC_REQUESTS'] = True  # Wrap each request in a transaction
+    
+    DATABASES = {'default': db_config}
 else:
     DATABASES = {
         'default': {

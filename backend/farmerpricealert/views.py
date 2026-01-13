@@ -135,6 +135,17 @@ class RegisterView(CreateAPIView):
         print("=" * 50)
         
         try:
+            # Check for duplicate email first
+            email = request.data.get('email', '').lower()
+            if not email:
+                return Response({"error": "Email is required"}, status=400)
+                
+            if User.objects.filter(email=email).exists():
+                return Response(
+                    {"error": "A user with this email already exists"}, 
+                    status=400
+                )
+            
             print("Step 1: Validating serializer...")
             serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
@@ -158,13 +169,20 @@ class RegisterView(CreateAPIView):
             print(f"Step 4: Token generated ✓")
             
             print("Step 5: Building verification link...")
-            site_url = os.getenv('SITE_URL', 'http://127.0.0.1:8000')
+            site_url = os.getenv('SITE_URL')
+            if not site_url:
+                print("ERROR: SITE_URL environment variable not set")
+                return Response(
+                    {"error": "Server configuration error. Please contact support."}, 
+                    status=500
+                )
             verification_link = f"{site_url}/api/verify-email/{token}/"
             print(f"Step 5: Verification link: {verification_link}")
             
             print("Step 6: Sending email...")
             print(f"From: {settings.DEFAULT_FROM_EMAIL}")
             print(f"To: {user.email}")
+            
             try:
                 send_mail(
                     subject="Verify your AgriPrice Account",
@@ -176,22 +194,35 @@ class RegisterView(CreateAPIView):
                 print("Step 6: Email sent successfully ✓")
             except Exception as e:
                 print(f"Step 6: Email FAILED - {str(e)}")
-                user.delete()
-                return Response({"error": f"Failed to send email: {str(e)}"}, status=500)
+                # DON'T delete the user - let them contact support
+                return Response({
+                    "message": "Account created but email verification failed. Please contact support to verify your account.",
+                    "warning": "Email could not be sent. Please check your email address.",
+                    "user_id": user.id
+                }, status=201)  # Still return 201 - account was created
             
             print("SUCCESS: Registration complete!")
             print("=" * 50)
             return Response(
-                {"message": "User registered successfully", "token": token},
+                {"message": "User registered successfully. Please check your email to verify your account.", "token": token},
                 status=status.HTTP_201_CREATED
             )
+            
+        except IntegrityError as e:
+            print(f"ERROR: IntegrityError - {str(e)}")
+            if 'email' in str(e).lower():
+                return Response({"error": "This email is already registered"}, status=400)
+            if 'username' in str(e).lower():
+                return Response({"error": "This username is already taken"}, status=400)
+            return Response({"error": "Registration failed due to duplicate data"}, status=400)
+            
         except Exception as e:
             print(f"ERROR: Registration failed - {str(e)}")
             print(f"Error type: {type(e).__name__}")
             import traceback
             print(f"Traceback:\n{traceback.format_exc()}")
             print("=" * 50)
-            return Response({"error": f"Registration failed: {str(e)}"}, status=500)
+            return Response({"error": "Registration failed. Please try again."}, status=400)
 
 
 from rest_framework.decorators import api_view, permission_classes, authentication_classes # <--- Import this
