@@ -1,4 +1,17 @@
-DATABASE_URL=postgresql://ummarr:dLlz4eCTurhUrFX4_TnoqA@agripricedb-11710.jxf.gcp-asia-southeast1.cockroachlabs.cloud:26257/defaultdb?sslmode=require
+# Old CockroachDB credentials (DEPRECATED - DO NOT USE)
+# DATABASE_URL=postgresql://ummarr:dLlz4eCTurhUrFX4_TnoqA@agripricedb-11710.jxf.gcp-asia-southeast1.cockroachlabs.cloud:26257/defaultdb?sslmode=require
+
+# Current Railway PostgreSQL - Use this in Render Environment
+DATABASE_URL=postgresql://postgres:LTyJelUvTJWqamYDqACOFYhXRdCvtBNN@ballast.proxy.rlwy.net:34409/railway
+DEBUG=False
+SECRET_KEY=django-insecure-random-deployment-key-12345
+EMAIL_HOST_USER=amazonminiwala@gmail.com
+EMAIL_HOST_PASSWORD=gyhepzihbxwyeisd
+CLOUDINARY_CLOUD_NAME=duyqfx8tw
+CLOUDINARY_API_KEY=119456793886522
+CLOUDINARY_API_SECRET=y7qduwJSF3IsStPHCRo2J6biEKU
+GOV_API_KEY=579b464db66ec23bdd0000010d34124ece90452a446148df3f3975f7
+SITE_URL=https://farmerpricealert.onrender.com
 CLOUDINARY_CLOUD_NAME=duyqfx8tw
 CLOUDINARY_API_KEY=119456793886522
 CLOUDINARY_API_SECRET=y7qduwJSF3IsStPHCRo2J6biEKU

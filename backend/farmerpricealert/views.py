@@ -610,7 +610,7 @@ def get_alerts(request):
             current_price_val = "Error checking"
 
         active_data.append({
-            "id": str(a.id),  # String to preserve large CockroachDB IDs
+            "id": str(a.id),  # Store as string for API consistency
             "crop": a.crop.name.title(),
             "market": a.market.name.title(),
             "target_min": str(a.target_min),
@@ -630,7 +630,7 @@ def get_alerts(request):
         "active": active_data,
         "history": [
             {
-                "id": str(h.id),  # String to preserve large CockroachDB IDs
+                "id": str(h.id),  # Store as string for API consistency
                 "crop": h.subscription.crop.name.title(),
                 "market": h.subscription.market.name.title(),
                 "price_reached": str(h.price.modal_price if h.price else "N/A"),
@@ -781,7 +781,7 @@ def delete_alert(request, alert_id):
 def update_alert(request, alert_id):
     user = request.user
 
-    # Convert alert_id to proper type for CockroachDB
+    # Convert alert_id to integer for database lookup
     try:
         alert_id = int(alert_id)
     except (ValueError, TypeError):

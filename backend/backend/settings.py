@@ -190,28 +190,13 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 DATABASE_URL = os.getenv('DATABASE_URL', '')
 
 if DATABASE_URL:
-    # Auto-detect database type
-    if 'cockroachlabs' in DATABASE_URL:
-        # CockroachDB
-        DATABASES = {
-            'default': dj_database_url.config(
-                default=DATABASE_URL,
-                engine='django_cockroachdb'
-            )
-        }
-    elif 'postgres' in DATABASE_URL or 'postgresql' in DATABASE_URL:
-        # PostgreSQL (Render, AWS RDS, Railway, etc.)
-        DATABASES = {
-            'default': dj_database_url.config(
-                default=DATABASE_URL,
-                engine='django.db.backends.postgresql'
-            )
-        }
-    else:
-        # MySQL or other
-        DATABASES = {
-            'default': dj_database_url.config(default=DATABASE_URL)
-        }
+    # PostgreSQL (Railway, Render, AWS RDS, etc.)
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=DATABASE_URL,
+            engine='django.db.backends.postgresql'
+        )
+    }
 else:
     # Development: SQLite
     DATABASES = {
