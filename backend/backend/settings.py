@@ -30,11 +30,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-# Force DEBUG to True temporarily to see errors
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
-# Allow all hosts temporarily for debugging
-ALLOWED_HOSTS = ['*']
+# Restrict allowed hosts - allows onrender.com and localhost
+ALLOWED_HOSTS = [
+    'farmerpricealert.onrender.com',
+    'localhost',
+    '127.0.0.1',
+    '*.onrender.com',
+] + ([os.getenv('CUSTOM_DOMAIN')] if os.getenv('CUSTOM_DOMAIN') else [])
 
 CSRF_TRUSTED_ORIGINS = ['https://*.onrender.com']
 
@@ -183,14 +187,33 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-if os.getenv('DATABASE_URL'):
-    DATABASES = {
-        'default': dj_database_url.config(
-            default=os.getenv('DATABASE_URL'),
-            engine='django_cockroachdb'
-        )
-    }
+DATABASE_URL = os.getenv('DATABASE_URL', '')
+
+if DATABASE_URL:
+    # Auto-detect database type
+    if 'cockroachlabs' in DATABASE_URL:
+        # CockroachDB
+        DATABASES = {
+            'default': dj_database_url.config(
+                default=DATABASE_URL,
+                engine='django_cockroachdb'
+            )
+        }
+    elif 'postgres' in DATABASE_URL or 'postgresql' in DATABASE_URL:
+        # PostgreSQL (Render, AWS RDS, etc.)
+        DATABASES = {
+            'default': dj_database_url.config(
+                default=DATABASE_URL,
+                engine='django.db.backends.postgresql'
+            )
+        }
+    else:
+        # MySQL or other
+        DATABASES = {
+            'default': dj_database_url.config(default=DATABASE_URL)
+        }
 else:
+    # Development: SQLite
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
