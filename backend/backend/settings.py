@@ -200,7 +200,7 @@ if DATABASE_URL:
             )
         }
     elif 'postgres' in DATABASE_URL or 'postgresql' in DATABASE_URL:
-        # PostgreSQL (Render, AWS RDS, etc.)
+        # PostgreSQL (Render, AWS RDS, Railway, etc.)
         DATABASES = {
             'default': dj_database_url.config(
                 default=DATABASE_URL,
