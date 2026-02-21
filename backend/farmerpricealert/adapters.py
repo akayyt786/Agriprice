@@ -1,11 +1,40 @@
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from allauth.account.utils import user_email, user_field
 from django.contrib.auth import get_user_model
+from django.contrib.sites.models import Site
+from django.conf import settings
+import os
 
 User = get_user_model()
 
 
 class MySocialAccountAdapter(DefaultSocialAccountAdapter):
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Fix Site domain on initialization
+        self._ensure_correct_site_domain()
+    
+    def _ensure_correct_site_domain(self):
+        """Ensure the Site domain matches the current environment"""
+        try:
+            site_domain = os.environ.get('SITE_DOMAIN', 'farmerpricealert.onrender.com')
+            site = Site.objects.get(id=settings.SITE_ID)
+            
+            if site.domain != site_domain:
+                print(f"DEBUG: Fixing Site domain from '{site.domain}' to '{site_domain}'", flush=True)
+                site.domain = site_domain
+                site.name = 'Farmer Price Alert'
+                site.save()
+        except Site.DoesNotExist:
+            print(f"DEBUG: Creating Site with domain 'farmerpricealert.onrender.com'", flush=True)
+            Site.objects.create(
+                id=settings.SITE_ID,
+                domain='farmerpricealert.onrender.com',
+                name='Farmer Price Alert'
+            )
+        except Exception as e:
+            print(f"DEBUG: Error fixing Site domain: {str(e)}", flush=True)
     
     def on_authentication_error(self, request, provider_id, error=None, exception=None, extra_context=None):
         print(f"DEBUG: on_authentication_error! Provider: {provider_id}, Error: {error}, Exception: {exception}", flush=True)
