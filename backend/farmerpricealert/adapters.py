@@ -38,6 +38,31 @@ class MySocialAccountAdapter(DefaultSocialAccountAdapter):
     
     def on_authentication_error(self, request, provider_id, error=None, exception=None, extra_context=None):
         print(f"DEBUG: on_authentication_error! Provider: {provider_id}, Error: {error}, Exception: {exception}", flush=True)
+        
+        # Log detailed error info
+        if exception:
+            print(f"DEBUG: Full exception: {type(exception).__name__}: {str(exception)}", flush=True)
+            import traceback
+            print(f"DEBUG: Traceback: {traceback.format_exc()}", flush=True)
+        
+        # Check SocialApp and Site
+        try:
+            from allauth.socialaccount.models import SocialApp
+            from django.contrib.sites.models import Site
+            
+            google_app = SocialApp.objects.get(provider='google')
+            print(f"DEBUG: Google SocialApp found: {google_app.name}, client_id={google_app.client_id[:10]}...", flush=True)
+            print(f"DEBUG: SocialApp linked to sites: {[s.domain for s in google_app.sites.all()]}", flush=True)
+            
+            current_site = Site.objects.get_current()
+            print(f"DEBUG: Current Site: domain='{current_site.domain}', id={current_site.id}", flush=True)
+            
+            request_host = request.get_host()
+            print(f"DEBUG: Request host: {request_host}", flush=True)
+            
+        except Exception as e:
+            print(f"DEBUG: Error checking SocialApp/Site: {str(e)}", flush=True)
+        
         # The base class doesn't have a default implementation for this that we need to call if it errors
 
     def pre_social_login(self, request, sociallogin):

@@ -2,6 +2,40 @@ from django.utils.functional import SimpleLazyObject
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.auth import get_user as get_session_user  # Standard Django session auth
 from .authenticate import CookieJWTAuthentication
+from django.contrib.sites.models import Site
+from django.conf import settings
+import os
+
+
+class EnsureSiteDomainMiddleware:
+    """Ensure Site domain matches current environment before any OAuth processing"""
+    def __init__(self, get_response):
+        self.get_response = get_response
+        self._ensure_site_domain()
+    
+    def _ensure_site_domain(self):
+        """Fix Site domain on app startup"""
+        try:
+            site_domain = os.environ.get('SITE_DOMAIN', 'farmerpricealert.onrender.com')
+            site = Site.objects.get(id=settings.SITE_ID)
+            
+            if site.domain != site_domain:
+                print(f"🔧 Middleware: Fixing Site domain from '{site.domain}' to '{site_domain}'", flush=True)
+                site.domain = site_domain
+                site.name = 'Farmer Price Alert'
+                site.save()
+        except Site.DoesNotExist:
+            print(f"🔧 Middleware: Creating Site with domain 'farmerpricealert.onrender.com'", flush=True)
+            Site.objects.create(
+                id=settings.SITE_ID,
+                domain='farmerpricealert.onrender.com',
+                name='Farmer Price Alert'
+            )
+        except Exception as e:
+            print(f"⚠️ Middleware: Error fixing Site domain: {str(e)}", flush=True)
+    
+    def __call__(self, request):
+        return self.get_response(request)
 
 
 def get_user_unified(request):

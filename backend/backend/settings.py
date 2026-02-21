@@ -144,6 +144,7 @@ SIMPLE_JWT = {
 }
 
 MIDDLEWARE = [
+    'farmerpricealert.middleware.EnsureSiteDomainMiddleware',  # Must be first to fix Site domain before OAuth
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
