@@ -14,6 +14,7 @@ from .views import (
     PasswordResetRequestView,
     PasswordResetConfirmView
 )
+from .views_oauth_debug import oauth_debug_status
 from django.views.decorators.csrf import csrf_exempt
 from .views import update_profile, change_password, delete_account
 from rest_framework.permissions import IsAuthenticated
@@ -61,6 +62,7 @@ urlpatterns = [
     path("api/register/", csrf_exempt(RegisterView.as_view()), name="register_api"),
     path("api/login-cookie/", CookieLoginView.as_view(), name="cookie_login"),
     path("api/logout/", logout_user, name="logout_api"),
+    path("api/debug/oauth-status/", oauth_debug_status, name="oauth_debug_status"),
     path("api/password-reset/", PasswordResetRequestView.as_view(), name="password_reset_request"),
     path("api/password-reset/confirm/", PasswordResetConfirmView.as_view(), name="password_reset_confirm"),
     path("api/profile/me/", get_profile, name="get_profile"),
