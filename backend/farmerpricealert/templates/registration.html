@@ -1,5 +1,6 @@
 {% load static %}
 {% load socialaccount %}
+{% load social_tags %}
 <!DOCTYPE html>
 <html lang="en">
 
@@ -422,11 +423,13 @@
                     <span id="btn-text">Create Free Account</span>
                 </button>
             </form>
+            {% if google_oauth_available %}
             <button type="button" class="google-btn"
-                onclick="window.location.href='{% provider_login_url 'google' %}';">
+                onclick="window.location.href='{% url "socialaccount_login" "google" %}';">
                 <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" alt="Google">
                 Sign up with Google
             </button>
+            {% endif %}
 
             <div class="footer-text">Already have an account? <a href="{% url 'login_page' %}">Login</a></div>
         </div>
