@@ -426,7 +426,7 @@
             {% google_oauth_available as has_google %}
             {% if has_google %}
             <button type="button" class="google-btn"
-                onclick="window.location.href='{% url "socialaccount_login" "google" %}';">
+                onclick="window.location.href='{% provider_login_url "google" %}';">
                 <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" alt="Google">
                 Sign up with Google
             </button>
