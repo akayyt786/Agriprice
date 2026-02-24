@@ -33,6 +33,10 @@ ENV/
 .DS_Store
 Thumbs.db
 
+# Django build artifacts
+staticfiles/
+db.sqlite3
+
 # Gemini Artifacts
 .gemini/
 antigravity/
