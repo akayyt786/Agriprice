@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from pathlib import Path
 from datetime import timedelta
 import os
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 from decouple import config
 import dj_database_url
@@ -26,11 +27,20 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
+
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY')
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
+# Prevent accidentally running production with the insecure placeholder key.
+if not DEBUG and SECRET_KEY and SECRET_KEY.startswith('django-insecure-'):
+    raise ImproperlyConfigured(
+        "SECRET_KEY starts with 'django-insecure-' which is only safe for "
+        "local development. Generate a proper secret key and set it in your "
+        "production environment variables."
+    )
+
 
 # Restrict allowed hosts - allows onrender.com and localhost
 ALLOWED_HOSTS = [
@@ -91,7 +101,10 @@ MIGRATION_MODULES = {
 }
 
 # Password Reset Settings
-FRONTEND_RESET_URL = config('FRONTEND_RESET_URL', default='http://127.0.0.1:8000/reset-password')
+# Default to SITE_URL/reset-password so production deployments send correct links
+# even when FRONTEND_RESET_URL is not explicitly set.
+default_site_url = os.getenv('SITE_URL', 'http://127.0.0.1:8000')
+FRONTEND_RESET_URL = config('FRONTEND_RESET_URL', default=f'{default_site_url}/reset-password')
 PASSWORD_RESET_TIMEOUT = 3600  # 1 hour
 
 AUTHENTICATION_BACKENDS = (
