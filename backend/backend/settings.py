@@ -40,7 +40,21 @@ ALLOWED_HOSTS = [
     '*.onrender.com',
 ] + ([os.getenv('CUSTOM_DOMAIN')] if os.getenv('CUSTOM_DOMAIN') else [])
 
-CSRF_TRUSTED_ORIGINS = ['https://*.onrender.com']
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.onrender.com',
+] + (['https://' + _custom_domain] if (_custom_domain := os.getenv('CUSTOM_DOMAIN')) else [])
+
+# Render.com (and similar PaaS) terminate SSL at their proxy and forward
+# requests to Django over plain HTTP with X-Forwarded-Proto: https.
+# Without this, request.is_secure() returns False and allauth builds http://
+# callback URLs during the OAuth token exchange, causing a redirect_uri
+# mismatch error with Google ("third-party error").
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
+# Only send session / CSRF cookies over HTTPS in production
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
 
 
 # Application definition
