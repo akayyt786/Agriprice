@@ -14,6 +14,7 @@ from pathlib import Path
 from datetime import timedelta
 import os
 import secrets
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 from decouple import config
 import dj_database_url
@@ -31,10 +32,20 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
 # SECURITY WARNING: keep the secret key used in production secret!
-# Falls back to a random key when the environment variable is not set so that
-# management commands (e.g. collectstatic) don't fail on first deploy.
-# Always set a strong SECRET_KEY in production environment variables.
-SECRET_KEY = os.getenv('SECRET_KEY') or secrets.token_urlsafe(50)
+# In production, SECRET_KEY must be set in the environment.
+# In development (DEBUG=True), a temporary random key is generated as a
+# convenience so the server can start without a .env file; sessions won't
+# persist across restarts, which is acceptable locally.
+_raw_secret = os.getenv('SECRET_KEY', '')
+if _raw_secret:
+    SECRET_KEY = _raw_secret
+elif DEBUG:
+    SECRET_KEY = secrets.token_urlsafe(50)
+else:
+    raise ImproperlyConfigured(
+        "The SECRET_KEY environment variable is not set. "
+        "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(50))\""
+    )
 
 
 # Restrict allowed hosts - allows onrender.com and localhost
@@ -214,10 +225,12 @@ DATABASE_URL = os.getenv('DATABASE_URL', '')
 
 if DATABASE_URL:
     # PostgreSQL (Railway, Render, AWS RDS, etc.)
+    # conn_max_age=600 keeps connections alive for reuse (important for Railway's TCP proxy)
     DATABASES = {
         'default': dj_database_url.config(
             default=DATABASE_URL,
-            engine='django.db.backends.postgresql'
+            conn_max_age=600,
+            conn_health_checks=True,
         )
     }
 else:

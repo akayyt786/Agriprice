@@ -37,6 +37,10 @@ Thumbs.db
 staticfiles/
 db.sqlite3
 
+# Local environment files (never commit real credentials)
+.env
+RENDER_KEYS.txt
+
 # Gemini Artifacts
 .gemini/
 antigravity/
