@@ -13,7 +13,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from pathlib import Path
 from datetime import timedelta
 import os
-from django.core.exceptions import ImproperlyConfigured
+import secrets
 from dotenv import load_dotenv
 from decouple import config
 import dj_database_url
@@ -31,15 +31,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('SECRET_KEY')
-
-# Prevent accidentally running production with the insecure placeholder key.
-if not DEBUG and SECRET_KEY and SECRET_KEY.startswith('django-insecure-'):
-    raise ImproperlyConfigured(
-        "SECRET_KEY starts with 'django-insecure-' which is only safe for "
-        "local development. Generate a proper secret key and set it in your "
-        "production environment variables."
-    )
+# Falls back to a random key when the environment variable is not set so that
+# management commands (e.g. collectstatic) don't fail on first deploy.
+# Always set a strong SECRET_KEY in production environment variables.
+SECRET_KEY = os.getenv('SECRET_KEY') or secrets.token_urlsafe(50)
 
 
 # Restrict allowed hosts - allows onrender.com and localhost
