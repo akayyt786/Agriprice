@@ -194,12 +194,17 @@ class RegisterView(CreateAPIView):
                 print("Step 6: Email sent successfully ✓")
             except Exception as e:
                 print(f"Step 6: Email FAILED - {str(e)}")
-                # DON'T delete the user - let them contact support
+                
+                # FIX: Render blocks outbound SMTP (port 587/465). 
+                # Instead of leaving the user locked out (inactive), we auto-activate them.
+                user.is_active = True
+                user.save()
+                
                 return Response({
-                    "message": "Account created but email verification failed. Please contact support to verify your account.",
-                    "warning": "Email could not be sent. Please check your email address.",
+                    "message": "Registration successful! (Email verification skipped due to server restrictions)",
+                    "warning": "Email could not be sent. Your account is already active, you can log in immediately.",
                     "user_id": user.id
-                }, status=201)  # Still return 201 - account was created
+                }, status=201)
             
             print("SUCCESS: Registration complete!")
             print("=" * 50)
