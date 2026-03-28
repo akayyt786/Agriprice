@@ -460,7 +460,7 @@
                         <div class="flex items-stretch p-4 gap-3">
                             <div class="flex h-full flex-1 flex-col gap-4 rounded-lg min-w-40">
                                 <div class="w-full bg-center bg-no-repeat aspect-square bg-cover rounded-xl flex flex-col"
-                                    style='background-image: url("{{ dashboard_images.wheat.image.url }}");'>
+                                    style='background-image: url("{% if dashboard_images.wheat.image %}{{ dashboard_images.wheat.image.url }}{% endif %}");'>
                                 </div>
                                 <p id="card_price_wheat" class="text-[#101911] text-base font-medium leading-normal">
                                     Wheat - Loading...
@@ -469,7 +469,7 @@
 
                             <div class="flex h-full flex-1 flex-col gap-4 rounded-lg min-w-40">
                                 <div class="w-full bg-center bg-no-repeat aspect-square bg-cover rounded-xl flex flex-col"
-                                    style='background-image: url("{{ dashboard_images.rice.image.url }}");'>
+                                    style='background-image: url("{% if dashboard_images.rice.image %}{{ dashboard_images.rice.image.url }}{% endif %}");'>
                                 </div>
                                 <p id="card_price_rice" class="text-[#101911] text-base font-medium leading-normal">
                                     Rice - Loading...
@@ -478,7 +478,7 @@
 
                             <div class="flex h-full flex-1 flex-col gap-4 rounded-lg min-w-40">
                                 <div class="w-full bg-center bg-no-repeat aspect-square bg-cover rounded-xl flex flex-col"
-                                    style='background-image: url("{{ dashboard_images.cotton.image.url }}");'>
+                                    style='background-image: url("{% if dashboard_images.cotton.image %}{{ dashboard_images.cotton.image.url }}{% endif %}");'>
                                 </div>
                                 <p id="card_price_cotton" class="text-[#101911] text-base font-medium leading-normal">
                                     Cotton - Loading...
@@ -487,7 +487,7 @@
 
                             <div class="flex h-full flex-1 flex-col gap-4 rounded-lg min-w-40">
                                 <div class="w-full bg-center bg-no-repeat aspect-square bg-cover rounded-xl flex flex-col"
-                                    style='background-image: url("{{ dashboard_images.soybean.image.url }}");'>
+                                    style='background-image: url("{% if dashboard_images.soybean.image %}{{ dashboard_images.soybean.image.url }}{% endif %}");'>
                                 </div>
                                 <p id="card_price_soybean" class="text-[#101911] text-base font-medium leading-normal">
                                     Soybean - Loading...
@@ -496,7 +496,7 @@
 
                             <div class="flex h-full flex-1 flex-col gap-4 rounded-lg min-w-40">
                                 <div class="w-full bg-center bg-no-repeat aspect-square bg-cover rounded-xl flex flex-col"
-                                    style='background-image: url("{{ dashboard_images.sugarcane.image.url }}");'>
+                                    style='background-image: url("{% if dashboard_images.sugarcane.image %}{{ dashboard_images.sugarcane.image.url }}{% endif %}");'>
                                 </div>
                                 <p id="card_price_sugarcane"
                                     class="text-[#101911] text-base font-medium leading-normal">
