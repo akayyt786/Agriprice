@@ -4,6 +4,8 @@ from django.utils.text import slugify
 from .models import User
 
 class RegisterSerializer(serializers.ModelSerializer):
+    username = serializers.CharField()
+
     class Meta:
         model = User
         fields = ["username", "email", "password"]
@@ -15,11 +17,14 @@ class RegisterSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("This email is already registered")
         return email
 
+    def to_internal_value(self, data):
+        """Sanitize username before validation (e.g., 'Raphael Kerluke' -> 'raphael_kerluke')"""
+        if 'username' in data:
+            data = data.copy()
+            data['username'] = slugify(data['username']).replace("-", "_")
+        return super().to_internal_value(data)
+
     def create(self, validated_data):
-        # Sanitize username (replace spaces with underscores)
-        username = validated_data.get("username", "")
-        validated_data["username"] = slugify(username).replace("-", "_")
-        
         # Normalize email
         if "email" in validated_data:
             validated_data["email"] = validated_data["email"].lower().strip()
