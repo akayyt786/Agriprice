@@ -1,4 +1,4 @@
-# Deployment Guide – Render (free plan) + Railway PostgreSQL
+# Deployment Guide – Render (free plan) + Supabase PostgreSQL
 
 > **No terminal access needed.** Everything runs automatically via `build.sh`
 > on every deploy. Just set the environment variables below once.
@@ -19,14 +19,15 @@
 
 ## Step-by-step: one-time setup
 
-### Step 1 – Get your Railway DATABASE_URL
+### Step 1 – Get your Supabase DATABASE_URL
 
-1. Go to [railway.app](https://railway.app) → open your **Postgres** service
-2. Click **Connect** tab → copy the **Public URL** (looks like):
+1. Go to [supabase.com](https://supabase.com) → create a new project
+2. Go to **Project Settings** → **Database**
+3. Scroll to **Connection string** → click **URI** → copy the URL (looks like):
    ```
-   postgresql://postgres:<password>@ballast.proxy.rlwy.net:34409/railway
+   postgresql://postgres:<password>@db.<project-ref>.supabase.co:5432/postgres
    ```
-3. Keep this handy – you'll paste it into Render in Step 3.
+4. Keep this handy – you'll paste it into Render in Step 3.
 
 ---
 
@@ -50,7 +51,7 @@ Example output: `3xKj9p2mNqRtWzLv8yHcBdFeGsAoUiYk7nP4QwXm6rVjT1CbEI5`
 |---|---|
 | `DEBUG` | `False` |
 | `SECRET_KEY` | *(paste the key from Step 2)* |
-| `DATABASE_URL` | *(paste the Railway URL from Step 1)* |
+| `DATABASE_URL` | *(paste the Supabase URL from Step 1)* |
 | `SITE_DOMAIN` | `farmerpricealert.onrender.com` |
 | `DJANGO_SUPERUSER_EMAIL` | your admin email, e.g. `admin@example.com` |
 | `DJANGO_SUPERUSER_USERNAME` | your admin username, e.g. `admin` |
@@ -112,7 +113,7 @@ Every `git push` to your connected branch triggers a new Render build.
 | Symptom | Fix |
 |---|---|
 | `KeyError: 'collectstatic'` | `SECRET_KEY` env var is missing – add it in Render environment |
-| `OperationalError: could not connect to server` | `DATABASE_URL` is wrong or Railway service is paused – check the Railway dashboard |
+| `OperationalError: could not connect to server` | `DATABASE_URL` is wrong or Supabase project is paused – check the Supabase dashboard |
 | Admin login fails | `DJANGO_SUPERUSER_PASSWORD` env var was not set before the first deploy – update it and **re-deploy** |
 | Google login shows "third-party error" | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` missing, or the callback URL `https://farmerpricealert.onrender.com/accounts/google/login/callback/` is not added to Google Cloud Console's **Authorised redirect URIs** |
 | Emails not sending | Check `EMAIL_HOST_USER` and `EMAIL_HOST_PASSWORD`; make sure you used a Gmail **App Password**, not your login password |

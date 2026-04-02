@@ -5,8 +5,15 @@
   <img src="https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL" />
   <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind" />
   <img src="https://img.shields.io/badge/JWT-000000?style=for-the-badge&logo=JSON%20web%20tokens&logoColor=white" alt="JWT" />
+  <img src="https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase" />
   <img src="https://img.shields.io/badge/Render-46E3B7?style=for-the-badge&logo=render&logoColor=white" alt="Render" />
   <img src="https://img.shields.io/badge/Cloudinary-3448C5?style=for-the-badge&logo=cloudinary&logoColor=white" alt="Cloudinary" />
+</p>
+
+<p align="center">
+  <a href="https://farmerpricealert.onrender.com" target="_blank">
+    <img src="https://img.shields.io/badge/Live_Site-Visit_Now-2ecc71?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Site" />
+  </a>
 </p>
 
 <h1 align="center">🌾 AgriPrice — Farmer Market Price Alert System</h1>
@@ -105,7 +112,7 @@ AgriPrice bridges the gap between Indian farmers and real-time agricultural mark
 | Technology | Purpose |
 |---|---|
 | **SQLite** | Local development database |
-| **PostgreSQL** | Production database (via Railway) |
+| **PostgreSQL** | Production database (via Supabase) |
 | **dj-database-url** | Database URL configuration |
 | **psycopg2-binary** | PostgreSQL adapter |
 
@@ -116,7 +123,7 @@ AgriPrice bridges the gap between Indian farmers and real-time agricultural mark
 | **Gmail SMTP** | Transactional emails (alerts, verification, password reset) |
 | **data.gov.in API** | Live Government mandi price data |
 | **Render** | Production hosting (PaaS) |
-| **Railway** | Managed PostgreSQL hosting |
+| **Supabase** | Managed PostgreSQL hosting |
 
 ### Frontend
 | Technology | Purpose |
@@ -172,10 +179,12 @@ AgriPrice bridges the gap between Indian farmers and real-time agricultural mark
 │  │ MarketPrice          │ │   │  │  (Media Storage)             │  │
 │  │ AlertSubscription    │ │   │  ├──────────────────────────────┤  │
 │  │ AlertHistory         │ │   │  │  Gmail SMTP                  │  │
-│  │ SiteContent          │ │   │  │  (Emails & Notifications)    │  │
-│  │ DashboardImage       │ │   │  └──────────────────────────────┘  │
-│  └──────────────────────┘ │   └────────────────────────────────────┘
-└───────────────────────────┘
+│  │                      │ │   │  │  (Emails & Notifications)    │  │
+│  └──────────┬───────────┘ │   │  ├──────────────────────────────┤  │
+│             │             │   │  │  Supabase                    │  │
+│             └─────────────┼───┼─▶│  (Production Database)       │  │
+│                           │   │  └──────────────────────────────┘  │
+└───────────────────────────┘   └────────────────────────────────────┘
 ```
 
 ---
@@ -430,7 +439,7 @@ All API endpoints require authentication (JWT cookie or session) unless noted.
 farmerpricealert/
 ├── .gitignore                    # Git ignore rules
 ├── README.md                     # This file
-├── DEPLOYMENT.md                 # Deployment guide for Render + Railway
+├── DEPLOYMENT.md                 # Deployment guide for Render + Supabase
 ├── render.yaml                   # Render PaaS configuration
 │
 └── backend/                      # Django project root
@@ -517,7 +526,7 @@ farmerpricealert/
 | Component | Service | Free Tier |
 |---|---|---|
 | **Web Server** | [Render](https://render.com) | ✅ Yes |
-| **Database** | [Railway](https://railway.app) (PostgreSQL) | ✅ Yes |
+| **Database** | [Supabase](https://supabase.com) (PostgreSQL) | ✅ Yes |
 | **Media Storage** | [Cloudinary](https://cloudinary.com) | ✅ Yes |
 
 ### Quick Deploy to Render
