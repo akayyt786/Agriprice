@@ -347,7 +347,8 @@ def _sync_all_mandi_prices():
     import subprocess, json as json_mod
     
     today = datetime.now().date()
-    limit = 500  # Fetch in large chunks to minimize API calls
+    limit = 10000  # Handle more records per sync (up to 10k)
+    # Fetch in large chunks to minimize API calls
     offset = 0
     total_saved = 0
 
@@ -565,8 +566,16 @@ def gov_market_prices(request):
                 "source": "local_cache"
             })
             
+        # If we have filters active (state/district/crop), the Gov API likely has more data 
+        # than our local cache (which is limited by sync thresholds). 
+        # We 'fudge' the total to allow the user to paginate past the local cache.
+        # Once they hit an empty local page, the fallback to Gov API will trigger and return the real total.
+        reported_total = total_count
+        if (state or district or crop or mandi) and total_count <= offset + limit:
+            reported_total = offset + limit + 1
+
         return Response({
-            "total": total_count,
+            "total": reported_total,
             "page": page,
             "prices": formatted,
             "cached": True
@@ -612,7 +621,7 @@ def gov_market_prices(request):
             info_msg += f". Showing all available prices in {state.title()}."
             
             return Response({
-                "total": total_count,
+                "total": total_count if not (state or district or crop or mandi) or total_count > offset + limit else offset + limit + 1,
                 "page": page,
                 "prices": formatted,
                 "cached": True,
@@ -650,7 +659,7 @@ def gov_market_prices(request):
                 })
             
             return Response({
-                "total": total_count,
+                "total": total_count if not (state or district or crop or mandi) or total_count > offset + limit else offset + limit + 1,
                 "page": page,
                 "prices": formatted,
                 "cached": True,
