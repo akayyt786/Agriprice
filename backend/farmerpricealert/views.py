@@ -446,28 +446,38 @@ def sync_daily_data(request):
     Dedicated endpoint for your external cron-job to trigger a full sync.
     Runs sync in a background thread to avoid Gunicorn request timeout.
     """
+    from django.core.cache import cache
     import threading
     
     today = datetime.now().date()
-    
-    # Check if we already have today's data (avoid duplicate syncs)
-    # Increased threshold to 5000 because total India records are usually 5000-7000
-    today_count = MarketPrice.objects.filter(arrival_date=today).count()
     force_sync = request.GET.get('force') == 'true'
     
-    if today_count > 5000 and not force_sync:
+    # Check if a sync is already running
+    if cache.get('mandi_sync_running') and not force_sync:
         return Response({
-            "status": "already_synced",
-            "message": f"Today's data is already fully synced ({today_count} records).",
+            "status": "in_progress",
+            "message": "A sync process is already running. Please check back later.",
             "date": today
         })
     
-    # Run sync in background thread so request doesn't timeout
+    # Check if we already have a lot of data for today (avoid redundant syncs unless forced)
+    today_count = MarketPrice.objects.filter(arrival_date=today).count()
+    if today_count > 5000 and not force_sync:
+        return Response({
+            "status": "already_synced",
+            "message": f"Today's data is already synced ({today_count} records). Use ?force=true to refresh.",
+            "date": today
+        })
+    
+    # Run sync in background thread
     def background_sync():
+        cache.set('mandi_sync_running', True, 600) # Lock for 10 mins
         try:
             _sync_all_mandi_prices()
         except Exception as e:
             print(f"--- BACKGROUND SYNC ERROR: {str(e)}")
+        finally:
+            cache.delete('mandi_sync_running')
     
     thread = threading.Thread(target=background_sync, daemon=True)
     thread.start()
@@ -521,7 +531,7 @@ def gov_market_prices(request):
     today = datetime.now().date()
     
     # Build local query based on filters
-    local_query = MarketPrice.objects.select_related("crop", "market").all()
+    local_query = MarketPrice.objects.select_related("crop", "market").filter(arrival_date=today)
     if state:
         local_query = local_query.filter(market__state__icontains=state)
     if district:
@@ -531,13 +541,12 @@ def gov_market_prices(request):
     if mandi:
         local_query = local_query.filter(market__name__icontains=mandi)
 
-    # Check if we have TODAY's data for this specific query locally
-    has_today_data = local_query.filter(arrival_date=today).exists()
-
-    if has_today_data:
-        # Today's data found locally — return it instantly (fastest path)
+    # Get records for the CURRENT page
+    local_prices = list(local_query.order_by("-arrival_date")[offset:offset+limit])
+    
+    if local_prices:
+        # Today's data found locally for this page — return it instantly
         total_count = local_query.count()
-        local_prices = local_query.order_by("-arrival_date")[offset:offset+limit]
         
         formatted = []
         for p in local_prices:
@@ -563,6 +572,7 @@ def gov_market_prices(request):
             "cached": True
         })
 
+
     # 2. BROAD FALLBACK: If specific filters found nothing for today, try just state-level
     if state:
         broad_query = MarketPrice.objects.select_related("crop", "market").filter(
@@ -573,9 +583,9 @@ def gov_market_prices(request):
         if crop:
             broad_query = broad_query.filter(crop__name__icontains=crop)
         
-        if broad_query.exists():
+        local_prices = list(broad_query.order_by("-arrival_date")[offset:offset+limit])
+        if local_prices:
             total_count = broad_query.count()
-            local_prices = broad_query.order_by("-arrival_date")[offset:offset+limit]
             
             formatted = []
             for p in local_prices:
@@ -610,16 +620,15 @@ def gov_market_prices(request):
             })
 
     # 3. GENERAL FALLBACK: Show any available data sorted by newest
-    any_today = MarketPrice.objects.filter(arrival_date=today).exists()
-    if any_today:
-        all_today = MarketPrice.objects.select_related("crop", "market").filter(
-            arrival_date=today
-        )
-        if crop:
-            all_today = all_today.filter(crop__name__icontains=crop)
-        
+    all_today = MarketPrice.objects.select_related("crop", "market").filter(
+        arrival_date=today
+    )
+    if crop:
+        all_today = all_today.filter(crop__name__icontains=crop)
+    
+    local_prices = list(all_today.order_by("-arrival_date")[offset:offset+limit])
+    if local_prices:
         total_count = all_today.count()
-        local_prices = all_today.order_by("-arrival_date")[offset:offset+limit]
         
         formatted = []
         for p in local_prices:
