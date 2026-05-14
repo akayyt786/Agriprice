@@ -347,7 +347,7 @@ def _sync_all_mandi_prices():
     import subprocess, json as json_mod
     
     today = datetime.now().date()
-    limit = 10000  # Handle more records per sync (up to 10k)
+    limit = 20000  # Captures a huge slice of the national data in one run
     # Fetch in large chunks to minimize API calls
     offset = 0
     total_saved = 0
@@ -373,6 +373,15 @@ def _sync_all_mandi_prices():
             if not records:
                 break
 
+            # PRE-FETCH: Get all relevant crops and markets to avoid thousands of DB hits
+            crop_names = {d.get("commodity", "").lower() for d in records}
+            market_names = {d.get("market", "").lower() for d in records}
+            
+            existing_crops = {c.name.lower(): c for c in Crop.objects.filter(name__in=crop_names)}
+            existing_markets = {m.name.lower(): m for m in Market.objects.filter(name__in=market_names)}
+
+            price_objects_to_create = []
+            
             for d in records:
                 raw_date = d.get("arrival_date")
                 try:
@@ -383,43 +392,46 @@ def _sync_all_mandi_prices():
                 if not formatted_date:
                     continue
 
-                # Resolve Crop & Market
+                # Resolve Crop
                 crop_name = d.get("commodity", "N/A").lower()
-                market_name = d.get("market", "N/A").lower()
-                
-                crop_obj, _ = Crop.objects.get_or_create(name=crop_name)
-                market_obj, _ = Market.objects.get_or_create(
-                    name=market_name,
-                    defaults={
-                        "state": d.get("state", "India"),
-                        "district": d.get("district", market_name)
-                    }
-                )
-                
-                # Update state/district if they were missing
-                updated = False
-                if d.get("state") and (not market_obj.state or market_obj.state == "India"):
-                    market_obj.state = d.get("state")
-                    updated = True
-                if d.get("district") and (not market_obj.district or market_obj.district == market_name):
-                    market_obj.district = d.get("district")
-                    updated = True
-                if updated:
-                    market_obj.save()
+                if crop_name not in existing_crops:
+                    crop_obj = Crop.objects.create(name=crop_name)
+                    existing_crops[crop_name] = crop_obj
+                else:
+                    crop_obj = existing_crops[crop_name]
 
-                # Save Price
-                _, created = MarketPrice.objects.get_or_create(
+                # Resolve Market
+                market_name = d.get("market", "N/A").lower()
+                if market_name not in existing_markets:
+                    market_obj = Market.objects.create(
+                        name=market_name,
+                        state=d.get("state", "India"),
+                        district=d.get("district", market_name)
+                    )
+                    existing_markets[market_name] = market_obj
+                else:
+                    market_obj = existing_markets[market_name]
+                    # Update state if missing
+                    if d.get("state") and (not market_obj.state or market_obj.state == "India"):
+                        market_obj.state = d.get("state")
+                        market_obj.district = d.get("district", market_obj.district)
+                        market_obj.save()
+
+                # Prepare Price Object (we'll bulk_create these)
+                # Note: bulk_create with ignore_conflicts=True is much faster than get_or_create
+                price_objects_to_create.append(MarketPrice(
                     crop=crop_obj,
                     market=market_obj,
                     arrival_date=formatted_date,
-                    defaults={
-                        "min_price": d.get("min_price"),
-                        "max_price": d.get("max_price"),
-                        "modal_price": d.get("modal_price")
-                    }
-                )
-                if created:
-                    total_saved += 1
+                    min_price=d.get("min_price") or 0,
+                    max_price=d.get("max_price") or 0,
+                    modal_price=d.get("modal_price") or 0
+                ))
+
+            # BULK INSERT: Much faster than individual saves
+            if price_objects_to_create:
+                MarketPrice.objects.bulk_create(price_objects_to_create, ignore_conflicts=True)
+                total_saved += len(price_objects_to_create)
 
             print(f"--- SYNC PROGRESS: Processed {offset + len(records)} / {total_available}")
             
@@ -427,6 +439,11 @@ def _sync_all_mandi_prices():
                 break
             
             offset += limit
+            
+            # CLEAR MEMORY: Help the free server stay within RAM limits
+            import gc
+            gc.collect()
+
         except Exception as e:
             print(f"--- SYNC EXCEPTION at offset {offset}: {str(e)}")
             break
