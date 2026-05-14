@@ -451,11 +451,14 @@ def sync_daily_data(request):
     today = datetime.now().date()
     
     # Check if we already have today's data (avoid duplicate syncs)
+    # Increased threshold to 5000 because total India records are usually 5000-7000
     today_count = MarketPrice.objects.filter(arrival_date=today).count()
-    if today_count > 100:
+    force_sync = request.GET.get('force') == 'true'
+    
+    if today_count > 5000 and not force_sync:
         return Response({
             "status": "already_synced",
-            "message": f"Today's data already exists ({today_count} records).",
+            "message": f"Today's data is already fully synced ({today_count} records).",
             "date": today
         })
     
@@ -475,57 +478,6 @@ def sync_daily_data(request):
         "date": today
     })
 
-
-@api_view(["GET"])
-@authentication_classes([CookieJWTAuthentication, SessionAuthentication])
-@permission_classes([IsAuthenticated])
-def autocomplete_suggestions(request):
-    """
-    Returns autocomplete suggestions for market price search fields.
-    Query params: field (state|district|mandi|crop), q (search term)
-    """
-    field = request.GET.get("field", "").strip().lower()
-    query = request.GET.get("q", "").strip()
-    
-    if not query or len(query) < 2:
-        return Response({"suggestions": []})
-    
-    suggestions = []
-    
-    if field == "state":
-        suggestions = list(
-            Market.objects.filter(state__icontains=query)
-            .values_list("state", flat=True)
-            .distinct()
-            .order_by("state")[:15]
-        )
-    elif field == "district":
-        suggestions = list(
-            Market.objects.filter(district__icontains=query)
-            .values_list("district", flat=True)
-            .distinct()
-            .order_by("district")[:15]
-        )
-    elif field == "mandi":
-        suggestions = list(
-            Market.objects.filter(name__icontains=query)
-            .values_list("name", flat=True)
-            .distinct()
-            .order_by("name")[:15]
-        )
-        # Title-case for display
-        suggestions = [s.title() for s in suggestions]
-    elif field == "crop":
-        suggestions = list(
-            Crop.objects.filter(name__icontains=query)
-            .values_list("name", flat=True)
-            .distinct()
-            .order_by("name")[:15]
-        )
-        # Title-case for display
-        suggestions = [s.title() for s in suggestions]
-    
-    return Response({"suggestions": suggestions})
 
 
 # Get government market prices
