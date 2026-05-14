@@ -16,6 +16,41 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <style>
+        .autocomplete-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            z-index: 50;
+            max-height: 200px;
+            overflow-y: auto;
+            background: white;
+            border: 1px solid #dce5dd;
+            border-radius: 8px;
+            margin-top: 4px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        }
+        .autocomplete-dropdown .ac-item {
+            padding: 8px 12px;
+            font-size: 13px;
+            color: #121713;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .autocomplete-dropdown .ac-item:hover {
+            background: #f1f4f1;
+        }
+        .autocomplete-dropdown .ac-item .ac-highlight {
+            font-weight: 700;
+            color: #1c5e21;
+        }
+        .autocomplete-dropdown .ac-empty {
+            padding: 8px 12px;
+            font-size: 12px;
+            color: #68826b;
+        }
+    </style>
 </head>
 
 <body>
@@ -114,36 +149,46 @@
                             <div class="flex flex-1 min-w-[200px] flex-col gap-1">
                                 <label class="text-xs font-bold text-[#121713]">Search Crop</label>
                                 <div class="relative">
-                                    <input id="filter-crop"
+                                    <input id="filter-crop" autocomplete="off"
                                         class="w-full rounded-lg bg-white p-2 text-sm text-[#121713] shadow-sm focus:ring-2 focus:ring-[#1c5e21]"
-                                        placeholder="e.g. Wheat, Rice" type="text" />
-
+                                        placeholder="e.g. Wheat, Rice" type="text"
+                                        oninput="handleAutocomplete(this, 'crop')" />
                                     <span
                                         class="material-symbols-outlined absolute right-2 top-2 text-[#68826b] text-lg">
                                         search
                                     </span>
+                                    <div id="dropdown-crop" class="autocomplete-dropdown hidden"></div>
                                 </div>
                             </div>
 
                             <div class="flex flex-1 min-w-[200px] flex-col gap-1">
                                 <label class="text-xs font-bold text-[#121713]">State</label>
-                                <input id="filter-state" placeholder="Type state name"
-                                    class="w-full rounded-lg bg-white p-2 text-sm text-[#121713] shadow-sm focus:ring-2 focus:ring-[#1c5e21]" />
-
+                                <div class="relative">
+                                    <input id="filter-state" placeholder="Type state name" autocomplete="off"
+                                        class="w-full rounded-lg bg-white p-2 text-sm text-[#121713] shadow-sm focus:ring-2 focus:ring-[#1c5e21]"
+                                        oninput="handleAutocomplete(this, 'state')" />
+                                    <div id="dropdown-state" class="autocomplete-dropdown hidden"></div>
+                                </div>
                             </div>
 
                             <div class="flex flex-1 min-w-[200px] flex-col gap-1">
                                 <label class="text-xs font-bold text-[#121713]">District</label>
-                                <input id="filter-district" placeholder="Type district name"
-                                    class="w-full rounded-lg bg-white p-2 text-sm text-[#121713] shadow-sm focus:ring-2 focus:ring-[#1c5e21]" />
-
+                                <div class="relative">
+                                    <input id="filter-district" placeholder="Type district name" autocomplete="off"
+                                        class="w-full rounded-lg bg-white p-2 text-sm text-[#121713] shadow-sm focus:ring-2 focus:ring-[#1c5e21]"
+                                        oninput="handleAutocomplete(this, 'district')" />
+                                    <div id="dropdown-district" class="autocomplete-dropdown hidden"></div>
+                                </div>
                             </div>
 
                             <div class="flex flex-1 min-w-[200px] flex-col gap-1">
                                 <label class="text-xs font-bold text-[#121713]">Mandi Name</label>
-                                <input id="filter-mandi" placeholder="Type mandi name"
-                                    class="w-full rounded-lg bg-white p-2 text-sm text-[#121713] shadow-sm focus:ring-2 focus:ring-[#1c5e21]" />
-
+                                <div class="relative">
+                                    <input id="filter-mandi" placeholder="Type mandi name" autocomplete="off"
+                                        class="w-full rounded-lg bg-white p-2 text-sm text-[#121713] shadow-sm focus:ring-2 focus:ring-[#1c5e21]"
+                                        oninput="handleAutocomplete(this, 'mandi')" />
+                                    <div id="dropdown-mandi" class="autocomplete-dropdown hidden"></div>
+                                </div>
                             </div>
 
                             <div class="flex flex-col gap-1 justify-end">
@@ -156,6 +201,7 @@
 
                             </div>
                         </div>
+
 
                         <div
                             class="hidden md:grid grid-cols-12 gap-4 px-4 py-3 border-b border-[#e0e5e0] text-sm font-bold text-[#68826b]">
@@ -441,6 +487,69 @@
             if (!dropdown.classList.contains("hidden") && !dropdown.contains(event.target) && event.target !== btn && !btn.contains(event.target)) {
                 dropdown.classList.add("hidden");
             }
+        });
+
+        // ===== AUTOCOMPLETE LOGIC =====
+        let acDebounceTimer = null;
+
+        function handleAutocomplete(inputEl, fieldName) {
+            clearTimeout(acDebounceTimer);
+            const query = inputEl.value.trim();
+            const dropdown = document.getElementById(`dropdown-${fieldName}`);
+
+            if (query.length < 2) {
+                dropdown.classList.add("hidden");
+                dropdown.innerHTML = "";
+                return;
+            }
+
+            acDebounceTimer = setTimeout(async () => {
+                try {
+                    const res = await fetch(`/api/autocomplete/?field=${fieldName}&q=${encodeURIComponent(query)}`, {
+                        credentials: "include"
+                    });
+                    const data = await res.json();
+                    renderDropdown(dropdown, data.suggestions || [], query, inputEl, fieldName);
+                } catch (err) {
+                    console.error("Autocomplete error:", err);
+                    dropdown.classList.add("hidden");
+                }
+            }, 250); // 250ms debounce
+        }
+
+        function renderDropdown(dropdown, suggestions, query, inputEl, fieldName) {
+            dropdown.innerHTML = "";
+
+            if (suggestions.length === 0) {
+                dropdown.innerHTML = '<div class="ac-empty">No suggestions found</div>';
+                dropdown.classList.remove("hidden");
+                return;
+            }
+
+            suggestions.forEach(item => {
+                const div = document.createElement("div");
+                div.className = "ac-item";
+                // Highlight the matching part
+                const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+                div.innerHTML = item.replace(regex, '<span class="ac-highlight">$1</span>');
+                div.addEventListener("click", () => {
+                    inputEl.value = item;
+                    dropdown.classList.add("hidden");
+                    dropdown.innerHTML = "";
+                });
+                dropdown.appendChild(div);
+            });
+
+            dropdown.classList.remove("hidden");
+        }
+
+        // Close dropdowns when clicking outside
+        document.addEventListener("click", (e) => {
+            document.querySelectorAll(".autocomplete-dropdown").forEach(dd => {
+                if (!dd.parentElement.contains(e.target)) {
+                    dd.classList.add("hidden");
+                }
+            });
         });
 
         lucide.createIcons();
