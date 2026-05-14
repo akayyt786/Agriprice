@@ -1411,3 +1411,32 @@ class PasswordResetConfirmView(APIView):
         })
 
 
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def autocomplete_suggestions(request):
+    """
+    Returns a list of suggestions for autocomplete based on the field type.
+    """
+    field = request.GET.get("field")
+    query = request.GET.get("q", "").strip()
+
+    if not query or len(query) < 2:
+        return Response({"suggestions": []})
+
+    suggestions = []
+    if field == "crop":
+        suggestions = Crop.objects.filter(name__icontains=query).values_list("name", flat=True).distinct()[:10]
+    elif field == "state":
+        suggestions = Market.objects.filter(state__icontains=query).values_list("state", flat=True).distinct()[:10]
+    elif field == "district":
+        suggestions = Market.objects.filter(district__icontains=query).values_list("district", flat=True).distinct()[:10]
+    elif field == "mandi":
+        suggestions = Market.objects.filter(name__icontains=query).values_list("name", flat=True).distinct()[:10]
+
+    # Title case for better display
+    suggestions = [s.title() for s in suggestions]
+
+    return Response({"suggestions": suggestions})
+
+
+
