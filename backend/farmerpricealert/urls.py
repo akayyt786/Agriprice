@@ -13,7 +13,8 @@ from .views import (
     alerts_page,get_profile,get_alerts,create_alert,get_past_alerts,list_markets,delete_alert,update_alert,get_dashboard_prices,get_notifications,mark_notifications_seen,
     PasswordResetRequestView,
     PasswordResetConfirmView,
-    sync_daily_data
+    sync_daily_data,
+    autocomplete_suggestions
 )
 from .views_oauth_debug import oauth_debug_status
 from django.views.decorators.csrf import csrf_exempt
@@ -84,6 +85,7 @@ urlpatterns = [
     path("api/market-prices/recent/", get_dashboard_prices, name="get_dashboard_prices"),
     path("api/gov/market-prices/", gov_market_prices, name="gov_market_prices"),
     path("api/sync-daily/", sync_daily_data, name="sync_daily_data"),
+    path("api/autocomplete/", autocomplete_suggestions, name="autocomplete_suggestions"),
 
    
 ]
