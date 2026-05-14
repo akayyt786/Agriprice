@@ -439,21 +439,42 @@ def _sync_all_mandi_prices():
 
 
 @api_view(["GET"])
-@permission_classes([AllowAny]) # Allow your external Cron/Pinger to hit this
+@permission_classes([AllowAny])  # Allow your external Cron/Pinger to hit this
 @authentication_classes([])
 def sync_daily_data(request):
     """
     Dedicated endpoint for your external cron-job to trigger a full sync.
+    Runs sync in a background thread to avoid Gunicorn request timeout.
     """
-    # Security: You can add a secret key check here if you want
-    # if request.GET.get('key') != 'your_secret_key': return Response(status=403)
+    import threading
     
-    saved_count = _sync_all_mandi_prices()
+    today = datetime.now().date()
+    
+    # Check if we already have today's data (avoid duplicate syncs)
+    today_count = MarketPrice.objects.filter(arrival_date=today).count()
+    if today_count > 100:
+        return Response({
+            "status": "already_synced",
+            "message": f"Today's data already exists ({today_count} records).",
+            "date": today
+        })
+    
+    # Run sync in background thread so request doesn't timeout
+    def background_sync():
+        try:
+            _sync_all_mandi_prices()
+        except Exception as e:
+            print(f"--- BACKGROUND SYNC ERROR: {str(e)}")
+    
+    thread = threading.Thread(target=background_sync, daemon=True)
+    thread.start()
+    
     return Response({
-        "status": "success",
-        "message": f"Synchronized {saved_count} new records for today.",
-        "date": datetime.now().date()
+        "status": "started",
+        "message": "Sync started in background. Data will be available shortly.",
+        "date": today
     })
+
 
 
 # Get government market prices
