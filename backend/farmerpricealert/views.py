@@ -338,8 +338,125 @@ class CookieLoginView(APIView):
         
         return response
 
+def _sync_all_mandi_prices():
+    """
+    Fetch ALL mandi prices for today from Gov API and save to local database.
+    Uses curl subprocess because Python requests times out on some networks.
+    Also cleans up data older than 7 days.
+    """
+    import subprocess, json as json_mod
+    
+    today = datetime.now().date()
+    limit = 500  # Fetch in large chunks to minimize API calls
+    offset = 0
+    total_saved = 0
+
+    print(f"--- SYNC START: Fetching all records for {today}")
+
+    while True:
+        url = f"{BASE_URL}?api-key={API_KEY}&format=json&limit={limit}&offset={offset}"
+        try:
+            result = subprocess.run(
+                ["curl", "-s", "--max-time", "120", url],
+                capture_output=True, text=True, timeout=130
+            )
+            
+            if result.returncode != 0:
+                print(f"--- SYNC ERROR: curl failed with code {result.returncode}")
+                break
+            
+            data_json = json_mod.loads(result.stdout)
+            records = data_json.get("records", [])
+            total_available = data_json.get("total", 0)
+
+            if not records:
+                break
+
+            for d in records:
+                raw_date = d.get("arrival_date")
+                try:
+                    formatted_date = datetime.strptime(raw_date, "%d/%m/%Y").date() if raw_date else None
+                except:
+                    continue
+
+                if not formatted_date:
+                    continue
+
+                # Resolve Crop & Market
+                crop_name = d.get("commodity", "N/A").lower()
+                market_name = d.get("market", "N/A").lower()
+                
+                crop_obj, _ = Crop.objects.get_or_create(name=crop_name)
+                market_obj, _ = Market.objects.get_or_create(
+                    name=market_name,
+                    defaults={
+                        "state": d.get("state", "India"),
+                        "district": d.get("district", market_name)
+                    }
+                )
+                
+                # Update state/district if they were missing
+                updated = False
+                if d.get("state") and (not market_obj.state or market_obj.state == "India"):
+                    market_obj.state = d.get("state")
+                    updated = True
+                if d.get("district") and (not market_obj.district or market_obj.district == market_name):
+                    market_obj.district = d.get("district")
+                    updated = True
+                if updated:
+                    market_obj.save()
+
+                # Save Price
+                _, created = MarketPrice.objects.get_or_create(
+                    crop=crop_obj,
+                    market=market_obj,
+                    arrival_date=formatted_date,
+                    defaults={
+                        "min_price": d.get("min_price"),
+                        "max_price": d.get("max_price"),
+                        "modal_price": d.get("modal_price")
+                    }
+                )
+                if created:
+                    total_saved += 1
+
+            print(f"--- SYNC PROGRESS: Processed {offset + len(records)} / {total_available}")
+            
+            if (offset + len(records)) >= total_available:
+                break
+            
+            offset += limit
+        except Exception as e:
+            print(f"--- SYNC EXCEPTION at offset {offset}: {str(e)}")
+            break
+
+    # CLEANUP: Remove data older than 7 days
+    seven_days_ago = today - timedelta(days=7)
+    deleted_count, _ = MarketPrice.objects.filter(arrival_date__lt=seven_days_ago).delete()
+    print(f"--- SYNC COMPLETE: Saved {total_saved} new records. Deleted {deleted_count} old records.")
+    
+    return total_saved
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny]) # Allow your external Cron/Pinger to hit this
+@authentication_classes([])
+def sync_daily_data(request):
+    """
+    Dedicated endpoint for your external cron-job to trigger a full sync.
+    """
+    # Security: You can add a secret key check here if you want
+    # if request.GET.get('key') != 'your_secret_key': return Response(status=403)
+    
+    saved_count = _sync_all_mandi_prices()
+    return Response({
+        "status": "success",
+        "message": f"Synchronized {saved_count} new records for today.",
+        "date": datetime.now().date()
+    })
+
+
 # Get government market prices
-@never_cache
 @never_cache
 @api_view(["GET"])
 @authentication_classes([CookieJWTAuthentication, SessionAuthentication])
@@ -376,39 +493,32 @@ def gov_market_prices(request):
     if mandi:
         params["filters[market]"] = mandi.title()
 
-    api_failed = False
-    try:
-        res = requests.get(BASE_URL, params=params, timeout=25) 
-        if res.status_code != 200:
-            api_failed = True
-    except Exception as e:
-        print(f"--- ERROR: Gov API Connection Failed: {str(e)}")
-        api_failed = True
+    # 1. LOCAL-FIRST: Check if we have data in local DB matching the filters
+    today = datetime.now().date()
+    
+    # Build local query based on filters
+    local_query = MarketPrice.objects.select_related("crop", "market").all()
+    if state:
+        local_query = local_query.filter(market__state__icontains=state)
+    if district:
+        local_query = local_query.filter(market__district__icontains=district)
+    if crop:
+        local_query = local_query.filter(crop__name__icontains=crop)
+    if mandi:
+        local_query = local_query.filter(market__name__icontains=mandi)
 
-    if api_failed:
-        # FALLBACK: Use local database if Gov API is down
-        print("--- WARNING: Gov API down, falling back to local database")
-        
-        # Build local query based on filters
-        local_prices = MarketPrice.objects.select_related("crop", "market").all()
-        
-        if state:
-            local_prices = local_prices.filter(market__state__icontains=state)
-        if district:
-            local_prices = local_prices.filter(market__district__icontains=district)
-        if crop:
-            local_prices = local_prices.filter(crop__name__icontains=crop)
-        if mandi:
-            local_prices = local_prices.filter(market__name__icontains=mandi)
-            
-        # Local Pagination
-        total_count = local_prices.count()
-        local_prices = local_prices.order_by("-arrival_date")[offset:offset+limit]
+    # Check if we have TODAY's data for this specific query locally
+    has_today_data = local_query.filter(arrival_date=today).exists()
+
+    if has_today_data:
+        # Today's data found locally — return it instantly (fastest path)
+        total_count = local_query.count()
+        local_prices = local_query.order_by("-arrival_date")[offset:offset+limit]
         
         formatted = []
         for p in local_prices:
             formatted.append({
-                "date": p.arrival_date.strftime("%d/%m/%Y") if p.arrival_date else "N/A",
+                "date": p.arrival_date.strftime("%d/%m/%Y"),
                 "crop_name": p.crop.name.title(),
                 "crop": p.crop.name.title(),
                 "mandi_name": p.market.name.title(),
@@ -426,12 +536,144 @@ def gov_market_prices(request):
             "total": total_count,
             "page": page,
             "prices": formatted,
-            "warning": "External API is currently unavailable. Showing latest cached data."
+            "cached": True
         })
 
-    data = res.json().get("records", [])
-    total_records = res.json().get("total", 0) # Gov API usually returns 'total' or similar. 
-    # If not present, we can't easily know the max pages, but we can assume 'has_more' if len(data) == limit.
+    # 2. BROAD FALLBACK: If specific filters found nothing for today, try just state-level
+    if state:
+        broad_query = MarketPrice.objects.select_related("crop", "market").filter(
+            market__state__icontains=state,
+            arrival_date=today
+        )
+        # Also filter by crop if provided
+        if crop:
+            broad_query = broad_query.filter(crop__name__icontains=crop)
+        
+        if broad_query.exists():
+            total_count = broad_query.count()
+            local_prices = broad_query.order_by("-arrival_date")[offset:offset+limit]
+            
+            formatted = []
+            for p in local_prices:
+                formatted.append({
+                    "date": p.arrival_date.strftime("%d/%m/%Y"),
+                    "crop_name": p.crop.name.title(),
+                    "crop": p.crop.name.title(),
+                    "mandi_name": p.market.name.title(),
+                    "commodity": p.crop.name.title(),
+                    "market": p.market.name.title(),
+                    "state": p.market.state,
+                    "district": p.market.district,
+                    "min_price": str(p.min_price),
+                    "max_price": str(p.max_price),
+                    "modal_price": str(p.modal_price),
+                    "source": "state_fallback"
+                })
+            
+            info_msg = f"No exact results for"
+            if district:
+                info_msg += f" district '{district}'"
+            if mandi:
+                info_msg += f" mandi '{mandi}'"
+            info_msg += f". Showing all available prices in {state.title()}."
+            
+            return Response({
+                "total": total_count,
+                "page": page,
+                "prices": formatted,
+                "cached": True,
+                "info": info_msg
+            })
+
+    # 3. GENERAL FALLBACK: Show any available data sorted by newest
+    any_today = MarketPrice.objects.filter(arrival_date=today).exists()
+    if any_today:
+        all_today = MarketPrice.objects.select_related("crop", "market").filter(
+            arrival_date=today
+        )
+        if crop:
+            all_today = all_today.filter(crop__name__icontains=crop)
+        
+        total_count = all_today.count()
+        local_prices = all_today.order_by("-arrival_date")[offset:offset+limit]
+        
+        formatted = []
+        for p in local_prices:
+            formatted.append({
+                "date": p.arrival_date.strftime("%d/%m/%Y"),
+                "crop_name": p.crop.name.title(),
+                "crop": p.crop.name.title(),
+                "mandi_name": p.market.name.title(),
+                "commodity": p.crop.name.title(),
+                "market": p.market.name.title(),
+                "state": p.market.state,
+                "district": p.market.district,
+                "min_price": str(p.min_price),
+                "max_price": str(p.max_price),
+                "modal_price": str(p.modal_price),
+                "source": "general_fallback"
+            })
+        
+        return Response({
+            "total": total_count,
+            "page": page,
+            "prices": formatted,
+            "cached": True,
+            "info": f"No exact match found. Showing available prices for today."
+        })
+
+    # 4. NO LOCAL DATA AT ALL: Try Gov API (last resort) using curl
+    import subprocess, json as json_mod, urllib.parse
+    api_failed = False
+    try:
+        # Build URL with params for curl
+        query_string = urllib.parse.urlencode(params)
+        full_url = f"{BASE_URL}?{query_string}"
+        result = subprocess.run(
+            ["curl", "-s", "--max-time", "60", full_url],
+            capture_output=True, text=True, timeout=65
+        )
+        if result.returncode != 0 or not result.stdout.strip():
+            api_failed = True
+        else:
+            res_json = json_mod.loads(result.stdout)
+    except Exception as e:
+        print(f"--- ERROR: Gov API Connection Failed: {str(e)}")
+        api_failed = True
+
+    if api_failed:
+        # Ultimate fallback: Return whatever we have in the local DB (any date)
+        all_local = MarketPrice.objects.select_related("crop", "market").all()
+        total_count = all_local.count()
+        local_prices = all_local.order_by("-arrival_date")[offset:offset+limit]
+        
+        formatted = []
+        for p in local_prices:
+            formatted.append({
+                "date": p.arrival_date.strftime("%d/%m/%Y") if p.arrival_date else "N/A",
+                "crop_name": p.crop.name.title(),
+                "crop": p.crop.name.title(),
+                "mandi_name": p.market.name.title(),
+                "commodity": p.crop.name.title(),
+                "market": p.market.name.title(),
+                "state": p.market.state,
+                "district": p.market.district,
+                "min_price": str(p.min_price),
+                "max_price": str(p.max_price),
+                "modal_price": str(p.modal_price),
+                "source": "local_cache_fallback"
+            })
+            
+        return Response({
+            "total": total_count,
+            "page": page,
+            "prices": formatted,
+            "warning": "External API currently unavailable. Showing latest cached data."
+        })
+
+    data = res_json.get("records", [])
+    total_records = res_json.get("total", 0)
+
     
     formatted = []
 

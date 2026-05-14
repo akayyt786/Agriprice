@@ -7,7 +7,7 @@ cloudinary
 cryptography
 defusedxml
 dj-database-url
-Django==5.0.2
+Django>=4.2,<5.1
 django-allauth
 django-cloudinary-storage
 django-cors-headers
