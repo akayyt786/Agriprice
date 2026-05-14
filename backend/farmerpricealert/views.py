@@ -620,40 +620,43 @@ def gov_market_prices(request):
             })
 
     # 3. GENERAL FALLBACK: Show any available data sorted by newest
-    all_today = MarketPrice.objects.select_related("crop", "market").filter(
-        arrival_date=today
-    )
-    if crop:
-        all_today = all_today.filter(crop__name__icontains=crop)
-    
-    local_prices = list(all_today.order_by("-arrival_date")[offset:offset+limit])
-    if local_prices:
-        total_count = all_today.count()
+    # ONLY trigger this if the user HAS NOT provided any specific search filters
+    if not (state or district or mandi):
+        all_today = MarketPrice.objects.select_related("crop", "market").filter(
+            arrival_date=today
+        )
+        if crop:
+            all_today = all_today.filter(crop__name__icontains=crop)
         
-        formatted = []
-        for p in local_prices:
-            formatted.append({
-                "date": p.arrival_date.strftime("%d/%m/%Y"),
-                "crop_name": p.crop.name.title(),
-                "crop": p.crop.name.title(),
-                "mandi_name": p.market.name.title(),
-                "commodity": p.crop.name.title(),
-                "market": p.market.name.title(),
-                "state": p.market.state,
-                "district": p.market.district,
-                "min_price": str(p.min_price),
-                "max_price": str(p.max_price),
-                "modal_price": str(p.modal_price),
-                "source": "general_fallback"
+        local_prices = list(all_today.order_by("-arrival_date")[offset:offset+limit])
+        if local_prices:
+            total_count = all_today.count()
+            
+            formatted = []
+            for p in local_prices:
+                formatted.append({
+                    "date": p.arrival_date.strftime("%d/%m/%Y"),
+                    "crop_name": p.crop.name.title(),
+                    "crop": p.crop.name.title(),
+                    "mandi_name": p.market.name.title(),
+                    "commodity": p.crop.name.title(),
+                    "market": p.market.name.title(),
+                    "state": p.market.state,
+                    "district": p.market.district,
+                    "min_price": str(p.min_price),
+                    "max_price": str(p.max_price),
+                    "modal_price": str(p.modal_price),
+                    "source": "general_fallback"
+                })
+            
+            return Response({
+                "total": total_count,
+                "page": page,
+                "prices": formatted,
+                "cached": True,
+                "info": f"No exact match found. Showing latest available prices."
             })
-        
-        return Response({
-            "total": total_count,
-            "page": page,
-            "prices": formatted,
-            "cached": True,
-            "info": f"No exact match found. Showing available prices for today."
-        })
+
 
     # 4. NO LOCAL DATA AT ALL: Try Gov API (last resort) using curl
     import subprocess, json as json_mod, urllib.parse
