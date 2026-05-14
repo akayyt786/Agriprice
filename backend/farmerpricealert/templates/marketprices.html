@@ -50,6 +50,54 @@
             font-size: 12px;
             color: #68826b;
         }
+        /* Skeleton Loading Animation */
+        @keyframes shimmer {
+            0% { background-position: -400px 0; }
+            100% { background-position: 400px 0; }
+        }
+        .skeleton {
+            background: linear-gradient(90deg, #e8ede9 25%, #f5f8f5 37%, #e8ede9 63%);
+            background-size: 800px 100%;
+            animation: shimmer 1.5s ease-in-out infinite;
+            border-radius: 6px;
+        }
+        .skeleton-row {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 16px;
+            align-items: center;
+            padding: 16px;
+            border-radius: 12px;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            margin-bottom: 8px;
+        }
+        .skeleton-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+        }
+        .skeleton-line {
+            height: 14px;
+            border-radius: 6px;
+        }
+        .skeleton-line-short {
+            height: 10px;
+            border-radius: 4px;
+            width: 60%;
+        }
+        .india-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: linear-gradient(135deg, #ff9933 0%, #ffffff 50%, #138808 100%);
+            color: #121713;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 20px;
+            border: 1px solid #dce5dd;
+        }
     </style>
 </head>
 
@@ -137,8 +185,9 @@
                     <div class="flex flex-wrap justify-between gap-3 p-4">
                         <div class="flex min-w-72 flex-col gap-3">
                             <p class="text-[#121713] text-[32px] font-bold">Market Prices</p>
-                            <p class="text-[#68826b] text-sm">
+                            <p class="text-[#68826b] text-sm flex items-center gap-2">
                                 Real-time prices from mandis across the country. Updated daily.
+                                <span class="india-badge">🇮🇳 India Only</span>
                             </p>
                         </div>
                     </div>
@@ -212,6 +261,7 @@
                             <div class="col-span-2 text-right">Last Updated</div>
                         </div>
 
+                        <div id="info-banner" class="hidden"></div>
                         <div class="flex flex-col gap-2" id="market-list">
                         </div>
 
@@ -292,7 +342,7 @@
         async function loadMarketPrices(page = 1) {
             CURRENT_PAGE = page;
             const container = document.getElementById("market-list");
-            container.innerHTML = "Loading...";
+            container.innerHTML = renderSkeleton(5);
 
             // Update buttons state
             document.getElementById("prevBtn").disabled = (page <= 1);
@@ -315,11 +365,44 @@
 
                 const res = await fetch(url, { credentials: "include" });
                 const data = await res.json();
+                
+                // Show info/warning messages from backend fallback system
+                const infoContainer = document.getElementById("info-banner");
+                if (data.info) {
+                    infoContainer.innerHTML = `
+                        <div class="flex items-center gap-2 rounded-lg bg-blue-50 border border-blue-200 px-4 py-2 text-sm text-blue-800 mb-3">
+                            <span class="material-symbols-outlined text-base">info</span>
+                            ${data.info}
+                        </div>`;
+                    infoContainer.classList.remove("hidden");
+                } else if (data.warning) {
+                    infoContainer.innerHTML = `
+                        <div class="flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-2 text-sm text-amber-800 mb-3">
+                            <span class="material-symbols-outlined text-base">warning</span>
+                            ${data.warning}
+                        </div>`;
+                    infoContainer.classList.remove("hidden");
+                } else {
+                    infoContainer.classList.add("hidden");
+                    infoContainer.innerHTML = "";
+                }
+                
                 renderData(data.prices || []);
+
+                // Update next button: disable if fewer results than page size
+                document.getElementById("nextBtn").disabled = (data.prices || []).length < 10;
 
             } catch (err) {
                 console.error(err);
-                container.innerHTML = "Failed to load market prices.";
+                container.innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-12 text-center">
+                        <div class="h-14 w-14 rounded-full bg-red-50 flex items-center justify-center mb-3">
+                            <span class="material-symbols-outlined text-red-500" style="font-size:28px">cloud_off</span>
+                        </div>
+                        <p class="text-base font-semibold text-[#121713] mb-1">Failed to load prices</p>
+                        <p class="text-sm text-[#68826b]">Please check your connection and try again.</p>
+                        <button onclick="loadMarketPrices(CURRENT_PAGE)" class="mt-3 px-4 py-2 rounded-lg bg-[#1c5e21] text-white text-sm font-bold hover:bg-[#144718]">Retry</button>
+                    </div>`;
             }
         }
 
@@ -334,12 +417,43 @@
             loadMarketPrices(1);
         }
 
+        function renderSkeleton(count = 5) {
+            let html = '';
+            for (let i = 0; i < count; i++) {
+                html += `
+                    <div class="skeleton-row">
+                        <div class="col-span-3 flex items-center gap-3">
+                            <div class="skeleton skeleton-circle"></div>
+                            <div class="flex-1">
+                                <div class="skeleton skeleton-line" style="width:${70 + Math.random()*30}%"></div>
+                                <div class="skeleton skeleton-line-short mt-1" style="width:${40 + Math.random()*30}%"></div>
+                            </div>
+                        </div>
+                        <div class="col-span-3">
+                            <div class="skeleton skeleton-line" style="width:${60 + Math.random()*30}%"></div>
+                            <div class="skeleton skeleton-line-short mt-1" style="width:${30 + Math.random()*30}%"></div>
+                        </div>
+                        <div class="col-span-2"><div class="skeleton skeleton-line ml-auto" style="width:60%"></div></div>
+                        <div class="col-span-2"><div class="skeleton skeleton-line ml-auto" style="width:55%"></div></div>
+                        <div class="col-span-2"><div class="skeleton skeleton-line ml-auto" style="width:50%"></div></div>
+                    </div>`;
+            }
+            return html;
+        }
+
         function renderData(prices) {
             const container = document.getElementById("market-list");
             container.innerHTML = "";
 
             if (!prices || prices.length === 0) {
-                container.innerHTML = "No results found.";
+                container.innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-16 text-center">
+                        <div class="h-16 w-16 rounded-full bg-[#f1f4f1] flex items-center justify-center mb-4">
+                            <span class="material-symbols-outlined text-[#68826b]" style="font-size:32px">search_off</span>
+                        </div>
+                        <p class="text-lg font-semibold text-[#121713] mb-1">No results found</p>
+                        <p class="text-sm text-[#68826b] max-w-md">Try adjusting your search filters or check back later. Data is refreshed daily from Indian government mandis.</p>
+                    </div>`;
                 return;
             }
 
