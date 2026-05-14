@@ -388,8 +388,10 @@
                 
                 renderData(data.prices || []);
 
-                // Update next button: disable if fewer results than page size
-                document.getElementById("nextBtn").disabled = (data.prices || []).length < 10;
+                // Update next button based on total count
+                const total = data.total || 0;
+                const limit = 10;
+                document.getElementById("nextBtn").disabled = (page * limit >= total);
 
             } catch (err) {
                 console.error(err);
